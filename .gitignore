@@ -10,6 +10,8 @@ wheels/
 .venv
 .DS_Store
 
+# Secrets — never commit; settings.py reads BASE_DIR/.env
+.env
 
 # Documents — staff lists and seed dumps hold real personal data
 *.sql
@@ -18,4 +20,9 @@ wheels/
 # Django
 *.sqlite3
 media/
+
+# ai-agent related
+.claude/
+mpr_raj/.claude/
+mpr_raj/.agents/
 .preview-tmp/
