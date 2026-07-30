@@ -1,0 +1,30 @@
+{% extends "accounts/app.html" %}
+{% block title %}Projects{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1 class="pg">Projects</h1>
+  <a href="{% url 'project_add' %}" class="btn">Add project</a>
+</div>
+{# Column widths live in app.css, under .tbl-projects. #}
+<div class="table tbl-projects">
+  <div class="thead">
+    <div>Name</div><div>PRISM ID</div><div>Category</div><div>Assigned employee</div><div></div>
+  </div>
+  {% for p in projects %}
+  <div class="trow">
+    <div class="t-key">{{ p.name }}</div>
+    <div class="t-id">{{ p.prism_id }}</div>
+    <div><span class="status st-gray">{{ p.get_category_display }}</span></div>
+    <div class="t-val">
+      {% if p.leader %}{{ p.leader.name|default:p.leader.username }}{% else %}—{% endif %}
+    </div>
+    <a href="{% url 'project_edit' p.pk %}" class="t-key">Edit</a>
+  </div>
+  {% empty %}
+  <div class="trow empty">
+    <div class="t-block">No projects yet</div>
+    <div class="t-note"><a href="{% url 'project_add' %}">Add the first project</a> to get started.</div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "accounts/app.html" %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="t">Users</div>
+  <a href="{% url 'user_add' %}" class="btn">Add user</a>
+</div>
+{# Column widths live in app.css, under .tbl-users. #}
+<div class="table tbl-users">
+  <div class="thead">
+    <div>Login ID</div><div>Name</div><div>Designation</div><div>Roles</div><div>Status</div><div></div>
+  </div>
+  {% for u in users %}
+  <div class="trow">
+    <div class="t-id">{{ u.username }}</div>
+    <div class="t-key">{{ u.name|default:"-" }}</div>
+    <div class="t-val">{{ u.designation|default:"-" }}</div>
+    <div class="t-val">
+      {% if u.is_staff %}Admin{% if u.is_sio or u.is_pl or u.is_dio %}, {% endif %}{% endif %}{% if u.is_sio %}SIO{% if u.is_pl or u.is_dio %}, {% endif %}{% endif %}{% if u.is_pl %}PL{% if u.is_dio %}, {% endif %}{% endif %}{% if u.is_dio %}DIO{% endif %}
+    </div>
+    <div>
+      {% if not u.is_active %}<span class="status st-red">Disabled</span>
+      {% elif u.is_activated %}<span class="status st-green">Active</span>
+      {% else %}<span class="status st-gray">Pending</span>{% endif %}
+    </div>
+    <a href="{% url 'user_edit' u.pk %}" class="t-key">Edit</a>
+  </div>
+  {% empty %}
+  <div class="trow empty">
+    <div class="t-block">No users yet</div>
+    <div class="t-note"><a href="{% url 'user_add' %}">Add the first user</a> to get started.</div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

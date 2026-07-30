@@ -1,0 +1,17 @@
+{% comment %}
+The month every report screen is scoped to. Plain GET so the choice lands in the URL
+and the page stays linkable and refreshable.
+
+data-submit-on-change is wired up in app.js; the <noscript> button is the fallback.
+{% endcomment %}
+{% if periods %}
+<form method="get" class="period-picker">
+  <label for="period">Month</label>
+  <select id="period" name="period" data-submit-on-change>
+    {% for p in periods %}
+    <option value="{{ p.pk }}" {% if p == period %}selected{% endif %}>{{ p }}</option>
+    {% endfor %}
+  </select>
+  <noscript><button type="submit" class="btn-outline">Show</button></noscript>
+</form>
+{% endif %}

@@ -1,0 +1,21 @@
+{% extends "accounts/app.html" %}
+{% block title %}Lock {{ period }}{% endblock %}
+{% block content %}
+<a href="{% url 'mpr_month' period.pk %}" class="btn-ghost btn-back">← Cancel</a>
+<div class="card w-sm">
+  <div class="t-title">Lock {{ period }}?</div>
+  <p class="t-val">
+    This submits all {{ filled }} {% if filled == 1 %}entry{% else %}entries{% endif %} and your
+    project figures for the month.
+  </p>
+  <div class="status st-red">
+    You cannot edit anything afterwards. To change something later you will have to
+    request an unlock and wait for an admin to reopen the month.
+  </div>
+  <form method="post" class="actions">
+    {% csrf_token %}
+    <button type="submit" class="btn">Lock month</button>
+    <a href="{% url 'mpr_month' period.pk %}" class="btn-ghost">Cancel</a>
+  </form>
+</div>
+{% endblock %}

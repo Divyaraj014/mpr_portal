@@ -1,0 +1,67 @@
+{% extends "accounts/app.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+{% comment %}
+One block per thing this user can act on. Roles stack, so an admin who also holds a
+DIO role gets their own report and the month's progress, in that order.
+{% endcomment %}
+<h1 class="pg">Welcome, {{ user.name|default:user.username }}</h1>
+<div class="pg-sub pg-intro">
+  {% if period %}{{ period }} is open for reporting. {{ due_phrase }}, {{ period.due_date|date:"j F Y" }}.
+  {% else %}No reporting month is open.{% endif %}
+</div>
+
+{% if not period %}
+<div class="card">
+  <div class="t-head">Nothing to report yet</div>
+  <div class="t-note">
+    {% if user.is_staff %}Open a month in <a href="{% url 'period_list' %}">Reporting months</a>
+      to start collecting.
+    {% else %}An admin opens the reporting month.
+      <a href="{% url 'mpr_list' %}">See past months</a>.{% endif %}
+  </div>
+</div>
+
+{% else %}
+
+{% if user.is_pl or user.is_dio %}
+<div class="card row">
+  <div class="grow-wide">
+    <div class="t-lead">Your report</div>
+    <div class="t-note">
+      {{ my_entries }} entr{{ my_entries|pluralize:"y,ies" }} recorded{% if split %} across your district and project reports{% endif %}{% if my_lock %}, locked on {{ my_lock.locked_at|date:"j F" }}{% endif %}.
+    </div>
+  </div>
+  {% if my_lock %}<span class="status st-navy">Locked</span>{% endif %}
+  <a class="btn" href="{% url 'mpr_month' period.pk %}">
+    {% if my_lock %}View your report{% else %}Fill your report{% endif %}</a>
+</div>
+{% endif %}
+
+{% if user.is_staff or user.is_sio %}
+<div class="card row">
+  <div class="grow-wide">
+    <div class="t-lead tnum">{{ locked }} of {{ reporters }} locked</div>
+    <div class="t-note">
+      {% if not_started > 0 %}{{ not_started }} not started yet.{% else %}Everyone has started filling.{% endif %}
+    </div>
+  </div>
+  {% if requests %}
+  <span class="status st-red">{{ requests }} unlock request{{ requests|pluralize }}</span>
+  {% endif %}
+  <a class="btn-outline" href="{% url 'report_status' %}?period={{ period.pk }}">Open Reports</a>
+</div>
+{% endif %}
+
+{% endif %}
+
+{% if pending %}
+<div class="card row">
+  <div class="grow-wide t-val">
+    {{ pending }} account{{ pending|pluralize }} created but never signed into. An account
+    activates the first time its owner signs in and sets their own password.
+  </div>
+  <a class="btn-outline" href="{% url 'user_list' %}">Review accounts</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,22 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}MPR Portal{% endblock %} — NIC Rajasthan</title>
+  <link rel="stylesheet" href="{% static 'accounts/fonts.css' %}">
+  <link rel="stylesheet" href="{% static 'accounts/app.css' %}">
+  <script>
+    /* Apply saved sidebar state and theme before paint — no flash of the wrong
+       width or a white page on navigation. Unset theme follows the OS. */
+    if (localStorage.getItem("sb") === "1") document.documentElement.classList.add("sb-collapsed");
+    document.documentElement.dataset.theme = localStorage.getItem("theme")
+      || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+</head>
+
+<body>{% block body %}{% endblock %}</body>
+
+</html>

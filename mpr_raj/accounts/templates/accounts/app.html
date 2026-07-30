@@ -1,0 +1,116 @@
+{% extends "accounts/base.html" %}
+{% load static %}
+{% comment %}
+The signed-in shell: top bar, nav rail, account menu, and the content well every
+page renders into. Pages extend this and fill {% block content %}.
+{% endcomment %}
+{% block body %}
+<div class="app">
+  <header class="topbar">
+    <a class="brand" href="{% url 'dashboard' %}">
+      <img class="logo" src="{% static 'accounts/nic-logo.png' %}" alt="National Informatics Centre" height="34">
+      <div class="brand-text">
+        <div class="bn">MPR Portal</div>
+        <div class="bs">Rajasthan</div>
+      </div>
+    </a>
+    <button type="button" class="icon-btn theme-toggle" aria-label="Switch theme" aria-pressed="false">
+      <span class="material-symbols-outlined ic-dark" aria-hidden="true">dark_mode</span>
+      <span class="material-symbols-outlined ic-light" aria-hidden="true">light_mode</span>
+    </button>
+  </header>
+  <div class="shell">
+  <aside class="sidebar">
+    <nav>
+      <button type="button" class="sb-toggle" aria-label="Toggle sidebar" aria-pressed="false" title="Collapse sidebar">
+        <span class="material-symbols-outlined" aria-hidden="true">menu_open</span>
+      </button>
+      <a href="{% url 'dashboard' %}" title="Dashboard" {% if request.resolver_match.url_name == 'dashboard' %}class="active"{% endif %}>
+        <span class="material-symbols-outlined" aria-hidden="true">grid_view</span>
+        <span>Dashboard</span>
+      </a>
+      {% if user.is_pl or user.is_dio %}
+      <a href="{% url 'mpr_list' %}" title="Monthly reports" {% if 'mpr' in request.resolver_match.url_name %}class="active"{% endif %}>
+        <span class="material-symbols-outlined" aria-hidden="true">edit_note</span>
+        <span>Monthly reports</span>
+      </a>
+      {% endif %}
+      {% if user.is_staff or user.is_sio %}
+      <a href="{% url 'reports' %}" title="Reports" {% if request.resolver_match.url_name|slice:":6" == 'report' %}class="active"{% endif %}>
+        <span class="material-symbols-outlined" aria-hidden="true">lab_profile</span>
+        <span>Reports</span>
+      </a>
+      {% endif %}
+      {% if user.is_staff %}
+      {% with n=request.resolver_match.url_name %}
+      {% comment %}
+      Master data behind one disclosure. Native <details>, like the account menu —
+      it opens itself when you're already on one of its pages, so the active item
+      is never hidden.
+      {% endcomment %}
+      <details class="nav-sub" {% if 'user' in n or 'project' in n or 'district' in n or 'period' in n %}open{% endif %}>
+        <summary title="Manage">
+          <span class="material-symbols-outlined" aria-hidden="true">tune</span>
+          <span>Manage</span>
+          <svg class="nav-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </summary>
+        <a href="{% url 'user_list' %}" title="Users" {% if 'user' in n %}class="active"{% endif %}>
+          <span class="material-symbols-outlined" aria-hidden="true">group</span>
+          <span>Users</span>
+        </a>
+        <a href="{% url 'project_list' %}" title="Projects" {% if 'project' in n %}class="active"{% endif %}>
+          <span class="material-symbols-outlined" aria-hidden="true">description</span>
+          <span>Projects</span>
+        </a>
+        <a href="{% url 'district_list' %}" title="Districts" {% if 'district' in n %}class="active"{% endif %}>
+          <span class="material-symbols-outlined" aria-hidden="true">location_on</span>
+          <span>Districts</span>
+        </a>
+        <a href="{% url 'period_list' %}" title="Reporting months" {% if 'period' in n %}class="active"{% endif %}>
+          <span class="material-symbols-outlined" aria-hidden="true">calendar_month</span>
+          <span>Reporting months</span>
+        </a>
+      </details>
+      {% endwith %}
+      {% endif %}
+    </nav>
+
+    <div class="acct">
+      <details class="acct-menu">
+        <summary class="acct-chip">
+          <div class="avatar">{{ user.name|default:user.username|first|upper }}</div>
+          <div class="acct-info">
+            <div class="n">{{ user.name|default:user.username }}</div>
+            <div class="r">{{ user.username }}</div>
+          </div>
+          <svg class="acct-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>
+        </summary>
+        <div class="acct-pop" role="menu">
+          <a href="{% url 'profile' %}" {% if request.resolver_match.url_name == 'profile' %}class="active"{% endif %} role="menuitem">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Profile
+          </a>
+          <a href="{% url 'settings' %}" {% if request.resolver_match.url_name == 'settings' %}class="active"{% endif %} role="menuitem">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Settings
+          </a>
+          <div class="sep"></div>
+          <form method="post" action="{% url 'logout' %}">{% csrf_token %}
+            <button type="submit" role="menuitem">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Log out
+            </button>
+          </form>
+        </div>
+      </details>
+    </div>
+  </aside>
+  <div class="main">
+    <main class="content">
+      <div class="content-inner">{% block content %}{% endblock %}</div>
+    </main>
+  </div>
+  </div>
+</div>
+<script src="{% static 'accounts/app.js' %}" defer></script>
+{% endblock %}

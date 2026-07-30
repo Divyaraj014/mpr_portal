@@ -1,0 +1,68 @@
+{% comment %}
+One report's sections, plus its project figures. Included by the month page (when the
+user owes only one report) and by the report page (when they owe both). Expects `g`,
+`period` and `editable`.
+{% endcomment %}
+{% for s in g.sections %}
+<details class="sec" {% if s.rows %}open{% endif %}>
+  <summary>
+    <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+    {{ s.label }}
+    <span class="status {% if s.rows %}st-green{% else %}st-gray{% endif %}">{{ s.rows|length }}</span>
+  </summary>
+
+  {% for e in s.rows %}
+  <div class="erow">
+    <div class="grow">
+      <div class="hl">{{ e.headline }}</div>
+      <div class="meta">
+        {% for label, value in e.cells %}<div><b>{{ label }}</b> {{ value }}</div>{% endfor %}
+      </div>
+    </div>
+    {% if e.photo %}<img src="{{ e.photo.url }}" alt="" width="52" height="52">{% endif %}
+    {% if editable %}
+    <div class="acts">
+      <a href="{% url 'mpr_entry_edit' period.pk s.kind e.pk %}" class="btn-ghost">Edit</a>
+      {# data-confirm is picked up by the one submit listener in app.js. #}
+      <form method="post" action="{% url 'mpr_entry_delete' e.pk %}"
+            data-confirm="Delete this row?">{% csrf_token %}
+        <button type="submit" class="btn-ghost danger">Delete</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  {# Read-only sections that already have rows need no footer at all. #}
+  {% if editable or not s.rows %}
+  <div class="sec-foot">
+    {% if editable %}
+      <a class="btn-outline" href="{% url 'mpr_entry_add' period.pk s.kind %}?scope={{ g.scope }}{% if g.project %}&amp;project={{ g.project.pk }}{% endif %}">Add {% if s.rows %}another{% endif %}</a>
+      {% if not s.rows %}<span class="hint">Nothing recorded for this month yet.</span>{% endif %}
+    {% else %}
+      <span class="hint">Nothing was recorded for this month.</span>
+    {% endif %}
+  </div>
+  {% endif %}
+</details>
+{% endfor %}
+
+{% for p in g.projects %}
+<details class="sec" open>
+  <summary>
+    <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+    {{ p.name }}
+    <span class="status st-gray">{{ p.get_category_display }} project</span>
+  </summary>
+  <div class="sec-foot">
+    {% if p.parameters.exists %}
+      <a class="btn-outline" href="{% url 'mpr_parameters' period.pk p.pk %}">
+        {% if editable %}Enter monthly figures{% else %}View figures{% endif %}</a>
+    {% else %}
+      <span class="hint">No parameters defined for this project. An admin sets them up once.</span>
+    {% endif %}
+  </div>
+</details>
+{% endfor %}

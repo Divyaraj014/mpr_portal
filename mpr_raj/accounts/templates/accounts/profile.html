@@ -1,0 +1,43 @@
+{% extends "accounts/app.html" %}
+{% block title %}Profile{% endblock %}
+{% block content %}
+<div class="page-head"><h1 class="pg">Profile</h1></div>
+
+<div class="card w-lg">
+  <div class="row">
+    <div class="avatar lg">{{ user.name|default:user.username|first|upper }}</div>
+    <div class="grow">
+      <div class="t-title">{{ user.name|default:user.username }}</div>
+      <div class="t-val">{{ user.designation|default:"NIC employee" }}</div>
+    </div>
+    <div class="push">
+      {% if not user.is_active %}<span class="status st-red">Disabled</span>
+      {% elif user.is_activated %}<span class="status st-green">Active</span>
+      {% else %}<span class="status st-gray">Pending</span>{% endif %}
+    </div>
+  </div>
+
+  <div class="detail">
+    <div class="k">Login ID</div><div class="val">{{ user.username }}</div>
+    <div class="k">Email</div><div class="val">{{ user.email|default:"-" }}</div>
+    <div class="k">Employee code</div><div class="val">{{ user.employee_code|default:"-" }}</div>
+    <div class="k">Designation</div><div class="val">{{ user.designation|default:"-" }}</div>
+    <div class="k">Phone</div><div class="val">{{ user.phone|default:"-" }}</div>
+    <div class="k">IP phone</div><div class="val">{{ user.ip_phone|default:"-" }}</div>
+    <div class="k">Place of posting</div><div class="val">{{ user.place_of_posting|default:"-" }}</div>
+    <div class="k">Roles</div><div class="val">{{ user.roles_display }}</div>
+    {% if user.is_pl %}
+    <div class="k">Assigned projects</div>
+    <div class="val">{% for p in user.projects.all %}{{ p.name }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}</div>
+    {% endif %}
+    {% if user.is_dio %}
+    <div class="k">Assigned districts</div>
+    <div class="val">{% for d in user.districts.all %}{{ d.name }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}</div>
+    {% endif %}
+  </div>
+
+  <div class="t-note faint">
+    To update these details, contact your NIC administrator.
+  </div>
+</div>
+{% endblock %}

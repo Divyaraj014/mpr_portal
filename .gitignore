@@ -8,3 +8,14 @@ wheels/
 
 # Virtual environments
 .venv
+.DS_Store
+
+
+# Documents — staff lists and seed dumps hold real personal data
+*.sql
+*.csv
+
+# Django
+*.sqlite3
+media/
+.preview-tmp/

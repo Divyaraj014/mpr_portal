@@ -1,0 +1,25 @@
+{% extends "accounts/app.html" %}
+{% block title %}{{ g.label }} · {{ period }}{% endblock %}
+{% block content %}
+<a href="{% url 'mpr_month' period.pk %}" class="btn-ghost btn-back">← Back to {{ period }}</a>
+<div class="page-head">
+  <div>
+    <h1 class="pg">{{ g.label }}</h1>
+    <div class="pg-sub">{{ period }} · {{ g.sub }}</div>
+  </div>
+  {% if lock %}<span class="status st-navy">Locked</span>
+  {% elif not period.is_open %}<span class="status st-gray">Closed</span>{% endif %}
+</div>
+
+{% include "accounts/_mpr_sections.html" %}
+
+{% if editable %}
+{# Locking covers the whole month, every report at once, so it lives on the month page. #}
+<div class="card lockbar">
+  <div class="grow t-note">
+    Filed everything for {{ period }}? All your reports are locked together.
+  </div>
+  <a href="{% url 'mpr_month' period.pk %}" class="btn-outline">Back to {{ period }}</a>
+</div>
+{% endif %}
+{% endblock %}

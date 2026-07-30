@@ -1,0 +1,10 @@
+{% comment %}
+Four download links for whatever the page is showing. `only` narrows them to one
+category; without it they carry the whole month. Same blocks either way.
+{% endcomment %}
+<div class="export-bar">
+  <a class="btn" href="{% url 'report_export' period.pk 'xlsx' %}{% if only %}?only={{ only }}{% endif %}">Excel</a>
+  <a class="btn-outline" href="{% url 'report_export' period.pk 'pdf' %}{% if only %}?only={{ only }}{% endif %}">PDF</a>
+  <a class="btn-outline" href="{% url 'report_export' period.pk 'docx' %}{% if only %}?only={{ only }}{% endif %}">Word</a>
+  <a class="btn-outline" href="{% url 'report_export' period.pk 'csv' %}{% if only %}?only={{ only }}{% endif %}">CSV</a>
+</div>

@@ -1,0 +1,21 @@
+{% extends "accounts/app.html" %}
+{% block title %}Delete{% endblock %}
+{% block content %}
+<a href="{{ back_url }}" class="btn-ghost btn-back">← Cancel</a>
+<div class="card w-sm">
+  <div class="t-title">Delete {{ obj_label }}?</div>
+  <p class="t-val">
+    This is permanent — the action can’t be undone.
+  </p>
+  {% if warnings %}
+  <div class="warnings">
+    {% for w in warnings %}<div class="status st-red">{{ w }}</div>{% endfor %}
+  </div>
+  {% endif %}
+  <form method="post" class="actions">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Delete</button>
+    <a href="{{ back_url }}" class="btn-ghost">Cancel</a>
+  </form>
+</div>
+{% endblock %}

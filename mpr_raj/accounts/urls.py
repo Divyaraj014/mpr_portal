@@ -1,0 +1,50 @@
+from django.contrib.auth.views import LogoutView
+from django.urls import path
+
+from . import captcha, views
+from .models import MPREntry
+
+urlpatterns = [
+    path("", views.dashboard, name="dashboard"),
+    path("login/", views.CaptchaLoginView.as_view(), name="login"),
+    path("logout/", LogoutView.as_view(), name="logout"),
+    path("password-change/", views.ForcedPasswordChangeView.as_view(), name="password_change"),
+    path("captcha.png", captcha.captcha_image, name="captcha_image"),
+    path("profile/", views.profile, name="profile"),
+    path("settings/", views.settings, name="settings"),
+    path("users/", views.user_list, name="user_list"),
+    path("users/add/", views.user_form, name="user_add"),
+    path("users/<int:pk>/", views.user_form, name="user_edit"),
+    path("users/<int:pk>/delete/", views.user_delete, name="user_delete"),
+    path("districts/", views.district_list, name="district_list"),
+    path("districts/add/", views.district_form, name="district_add"),
+    path("districts/<int:pk>/", views.district_form, name="district_edit"),
+    path("districts/<int:pk>/delete/", views.district_delete, name="district_delete"),
+    path("periods/", views.period_list, name="period_list"),
+    path("periods/add/", views.period_form, name="period_add"),
+    path("periods/<int:pk>/", views.period_form, name="period_edit"),
+    path("projects/", views.project_list, name="project_list"),
+    path("projects/add/", views.project_form, name="project_add"),
+    path("projects/<int:pk>/", views.project_form, name="project_edit"),
+    path("projects/<int:pk>/delete/", views.project_delete, name="project_delete"),
+    path("projects/parameter/<int:pk>/delete/", views.project_parameter_delete,
+         name="project_parameter_delete"),
+    path("mpr/", views.mpr_list, name="mpr_list"),
+    path("mpr/<int:pk>/", views.mpr_month, name="mpr_month"),
+    path("mpr/<int:pk>/report/district/", views.mpr_report, {"scope": MPREntry.DISTRICT},
+         name="mpr_district_report"),
+    path("mpr/<int:pk>/report/project/<int:project_pk>/", views.mpr_report,
+         {"scope": MPREntry.PROJECT}, name="mpr_project_report"),
+    # "section/" keeps <str:kind> from swallowing the project route below.
+    path("mpr/<int:period_pk>/section/<str:kind>/add/", views.mpr_entry_form, name="mpr_entry_add"),
+    path("mpr/<int:period_pk>/section/<str:kind>/<int:pk>/", views.mpr_entry_form, name="mpr_entry_edit"),
+    path("mpr/entry/<int:pk>/delete/", views.mpr_entry_delete, name="mpr_entry_delete"),
+    path("mpr/<int:period_pk>/project/<int:project_pk>/", views.mpr_parameters, name="mpr_parameters"),
+    path("mpr/<int:pk>/lock/", views.mpr_lock, name="mpr_lock"),
+    path("mpr/<int:pk>/unlock-request/", views.mpr_unlock_request, name="mpr_unlock_request"),
+    path("reports/", views.reports, name="reports"),
+    path("reports/status/", views.report_status, name="report_status"),
+    path("reports/data/<str:key>/", views.report_table, name="report_table"),
+    path("reports/unlock/<int:pk>/", views.report_unlock, name="report_unlock"),
+    path("reports/<int:pk>/export.<str:fmt>", views.report_export, name="report_export"),
+]

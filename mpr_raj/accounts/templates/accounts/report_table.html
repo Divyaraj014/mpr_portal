@@ -1,0 +1,50 @@
+{% extends "accounts/app.html" %}
+{% block title %}{{ table.title|default:"Report" }}{% endblock %}
+{% block content %}
+{% comment %}
+One renderer for all nine reports: the block from exports.tables() is (headers, rows) of
+plain strings, so this template never learns what a training or an award is.
+
+The grid tracks stay inline: the view sizes them from this report's own columns, so
+they aren't a fixed layout app.css could name.
+{% endcomment %}
+<a href="{% url 'reports' %}?period={{ period.pk }}" class="btn-ghost btn-back">← Back to reports</a>
+<div class="page-head">
+  <div>
+    <h1 class="pg">{{ table.title }}</h1>
+    <div class="pg-sub">{{ period }} · {{ table.rows|length }} row{{ table.rows|length|pluralize }}
+      filed across all Project Leaders and DIOs</div>
+  </div>
+  {% include "accounts/_period_picker.html" %}
+</div>
+
+{# Above the table, not below it: a long report shouldn't hide its own download. #}
+<div class="card row">
+  <div class="grow-wide t-note">
+    Download {{ table.title|lower }} for {{ period }}.
+  </div>
+  {% include "accounts/_export_bar.html" with only=key %}
+</div>
+
+{% if table.rows %}
+<div class="table scroll-x">
+  <div class="thead" style="grid-template-columns:{{ cols }};min-width:{{ grid_width }};">
+    {% for h in table.headers %}<div>{{ h }}</div>{% endfor %}
+  </div>
+  {% for row in table.rows %}
+  <div class="trow" style="grid-template-columns:{{ cols }};min-width:{{ grid_width }};">
+    {% for cell in row %}
+    <div class="wrap{% if forloop.first %} t-key{% endif %}" title="{{ cell }}">{{ cell|default:"–" }}</div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card empty">
+  <div class="t-block">Nothing filed here yet</div>
+  <div class="t-note">
+    No one recorded anything under {{ table.title|lower }} for {{ period }}.
+  </div>
+</div>
+{% endif %}
+{% endblock %}

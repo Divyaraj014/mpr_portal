@@ -1,0 +1,70 @@
+{% extends "accounts/app.html" %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="pg">Reports</h1>
+    <div class="pg-sub">Compiled data for one reporting month.{% if period %}
+      Due {{ period.due_date|date:"j F Y" }}.{% endif %}</div>
+  </div>
+  {% include "accounts/_period_picker.html" %}
+</div>
+
+{% if not period %}
+<div class="card empty">
+  <div class="t-block">No reporting months yet</div>
+  <div class="t-note">
+    Open one in <a href="{% url 'period_list' %}">Reporting months</a> to start collecting.
+  </div>
+</div>
+{% else %}
+
+{# Who has filed sits above the data: it says whether the data below is complete yet. #}
+<a class="card row" href="{% url 'report_status' %}?period={{ period.pk }}">
+  <div class="grow">
+    <div class="t-lead">Filing status</div>
+    <div class="t-note">
+      Who has filled and locked {{ period }}, and any unlock requests waiting on you.
+    </div>
+  </div>
+  {% if requests %}
+  <span class="status st-red">{{ requests }} unlock request{{ requests|pluralize }}</span>
+  {% endif %}
+  <span class="status st-navy">{{ locked }} of {{ reporters }} locked</span>
+  <svg class="chev-end" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+       aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+</a>
+
+<div class="section-label">Compiled data</div>
+{% comment %}
+The whole row is the link, not an "Open" word parked at the far right: the thing you
+read is the thing you click. Empty reports stay listed (the shape of the month is fixed)
+but recede, so the ones holding data are what you scan.
+{% endcomment %}
+<div class="table tbl-reports">
+  <div class="thead">
+    <div>Report</div><div class="right">Rows</div><div></div>
+  </div>
+  {% for t in tables %}
+  <a class="trow rowlink" href="{% url 'report_table' t.key %}?period={{ period.pk }}">
+    <div class="t-key{% if not t.rows %} quiet{% endif %}">{{ t.title }}</div>
+    <div class="right tnum{% if not t.rows %} faint{% endif %}">{{ t.rows|length }}</div>
+    <svg class="chev-end" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+         aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+  </a>
+  {% endfor %}
+</div>
+
+<div class="card row">
+  <div class="grow-wide">
+    <div class="t-key">Export the whole month</div>
+    <div class="t-fine">
+      Every report above in one file. Each report also downloads on its own page.
+    </div>
+  </div>
+  {% include "accounts/_export_bar.html" %}
+</div>
+{% endif %}
+{% endblock %}

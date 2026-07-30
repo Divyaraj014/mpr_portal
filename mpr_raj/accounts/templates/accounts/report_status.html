@@ -1,0 +1,95 @@
+{% extends "accounts/app.html" %}
+{% block title %}Filing status{% endblock %}
+{% block content %}
+<a href="{% url 'reports' %}?period={{ period.pk }}" class="btn-ghost btn-back">← Back to reports</a>
+<div class="page-head">
+  <div>
+    <h1 class="pg">Filing status</h1>
+    <div class="pg-sub">Who has filled and locked what.{% if period %}
+      Due {{ period.due_date|date:"j F Y" }}.{% endif %}</div>
+  </div>
+  {% include "accounts/_period_picker.html" %}
+</div>
+
+{% if not period %}
+<div class="card empty">
+  <div class="t-block">No reporting months yet</div>
+  <div class="t-note">
+    Open one in <a href="{% url 'period_list' %}">Reporting months</a> to start collecting.
+  </div>
+</div>
+{% else %}
+
+<div class="tiles">
+  <div class="tile"><div class="v">{{ rows|length }}</div><div class="l">Users reporting</div></div>
+  <div class="tile"><div class="v">{{ locked }}</div><div class="l">Locked their month</div></div>
+  <div class="tile"><div class="v">{{ requests }}</div><div class="l">Unlock requests pending</div></div>
+</div>
+
+{% comment %}
+The grid tracks stay inline here: the view computes them from how many MPR sections
+exist, so they aren't a fixed layout app.css could name.
+{% endcomment %}
+<div class="table scroll-x">
+  <div class="thead rrow" style="grid-template-columns:{{ cols }};min-width:{{ grid_width }};">
+    <div>User</div>
+    <div>Status</div>
+    {% for kind, short in kinds %}<div class="num">{{ short }}</div>{% endfor %}
+    <div class="num">Figures</div>
+  </div>
+  {% for r in rows %}
+  <div class="trow rrow" style="grid-template-columns:{{ cols }};min-width:{{ grid_width }};">
+    <div>
+      <div class="t-key">{{ r.user.name|default:r.user.username }}</div>
+      <div class="t-fine">
+        {% if r.user.is_pl %}PL{% endif %}{% if r.user.is_pl and r.user.is_dio %} + {% endif %}{% if r.user.is_dio %}DIO{% endif %}
+      </div>
+    </div>
+    <div class="st">
+      {% if r.lock.unlock_requested %}
+        <span class="status st-red" title="{{ r.lock.unlock_reason }}">Unlock requested</span>
+        {% if user.is_staff %}
+        <form method="post" action="{% url 'report_unlock' r.lock.pk %}">
+          {% csrf_token %}<button type="submit" class="btn-ghost accent">Reopen</button>
+        </form>
+        {% endif %}
+      {% elif r.lock %}
+        <span class="status st-navy">Locked {{ r.lock.locked_at|date:"j M" }}</span>
+        {% if user.is_staff %}
+        {# data-confirm is picked up by the one submit listener in app.js. #}
+        <form method="post" action="{% url 'report_unlock' r.lock.pk %}"
+              data-confirm="Reopen {{ period }} for {{ r.user.name|default:r.user.username }}?">
+          {% csrf_token %}<button type="submit" class="btn-ghost">Reopen</button>
+        </form>
+        {% endif %}
+      {% elif r.total %}
+        <span class="status st-green">In progress</span>
+      {% else %}
+        <span class="status st-gray">Not started</span>
+      {% endif %}
+    </div>
+    {% for n in r.counts %}
+    <div class="num {% if not n %}zero{% endif %}">{% if n %}{{ n }}{% else %}0{% endif %}</div>
+    {% endfor %}
+    <div class="num {% if not r.figures %}zero{% endif %}">{{ r.figures }}</div>
+  </div>
+  {% empty %}
+  <div class="trow empty">
+    <div class="t-note">No users hold a Project Leader or DIO role yet.</div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if requests %}
+<div class="card">
+  <div class="t-key">Unlock requests</div>
+  {% for r in rows %}{% if r.lock.unlock_requested %}
+  <div class="req-row">
+    <div class="t-label">{{ r.user.name|default:r.user.username }}</div>
+    <div class="t-note">{{ r.lock.unlock_reason|default:"No reason given." }}</div>
+  </div>
+  {% endif %}{% endfor %}
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

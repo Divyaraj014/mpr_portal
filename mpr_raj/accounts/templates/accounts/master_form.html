@@ -1,0 +1,64 @@
+{% extends "accounts/app.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<a href="{% url list_url %}" class="btn-ghost btn-back">← {{ back_label }}</a>
+<div class="card w-sm">
+  <div class="t-title">{{ title }}</div>
+  {{ form.non_field_errors }}
+  <form method="post">
+    {% csrf_token %}
+    {% for field in form %}
+    {% if field.field.widget.input_type == 'checkbox' %}
+    {# A checkbox reads as one line with its label, not a label stacked over a box. #}
+    <label for="{{ field.id_for_label }}" class="check-line">
+      {{ field }} {{ field.label }}
+    </label>
+    {% else %}
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% endif %}
+    {% if field.help_text %}<div class="helptext">{{ field.help_text }}</div>{% endif %}
+    {{ field.errors }}
+    {% endfor %}
+    <div class="actions">
+      <button type="submit" class="btn">Save</button>
+      {% if delete_url %}<a href="{{ delete_url }}" class="btn-ghost danger push">Delete</a>{% endif %}
+    </div>
+  </form>
+</div>
+
+{% if param_form %}
+{% comment %}
+Projects only: the recurring figures this project files every month. Its own
+<form>, posting back to this page under the "add_parameter" button name.
+{% endcomment %}
+<div class="card w-sm">
+  <div class="t-block">Monthly parameters</div>
+  <div class="helptext">
+    The Project Leader files a previous / reporting / cumulative figure against each of
+    these, every month.
+  </div>
+  {% for p in parameters %}
+  <div class="plist-row">
+    <div class="grow t-med">{{ p.name }}</div>
+    {% if p.months %}
+    <div class="t-fine">{{ p.months }} month{{ p.months|pluralize }} filed</div>
+    {% endif %}
+    <a href="{% url 'project_parameter_delete' p.pk %}" class="btn-ghost danger">Remove</a>
+  </div>
+  {% empty %}
+  <div class="plist-row t-note">
+    None yet — this project's figures table will be empty until you add one.
+  </div>
+  {% endfor %}
+  <form method="post" class="plist-add">
+    {% csrf_token %}
+    <div class="grow">
+      {{ param_form.name }}
+      {{ param_form.name.errors }}
+    </div>
+    <button type="submit" name="add_parameter" value="1" class="btn-outline">Add</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

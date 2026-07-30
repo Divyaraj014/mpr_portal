@@ -1,0 +1,28 @@
+{% extends "accounts/app.html" %}
+{% block title %}Districts{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1 class="pg">Districts</h1>
+  <a href="{% url 'district_add' %}" class="btn">Add district</a>
+</div>
+{# Column widths live in app.css, under .tbl-districts. #}
+<div class="table tbl-districts">
+  <div class="thead">
+    <div>Name</div><div>Assigned employee</div><div></div>
+  </div>
+  {% for d in districts %}
+  <div class="trow">
+    <div class="t-key">{{ d.name }}</div>
+    <div class="t-val">
+      {% if d.officer %}{{ d.officer.name|default:d.officer.username }}{% else %}—{% endif %}
+    </div>
+    <a href="{% url 'district_edit' d.pk %}" class="t-key">Edit</a>
+  </div>
+  {% empty %}
+  <div class="trow empty">
+    <div class="t-block">No districts yet</div>
+    <div class="t-note"><a href="{% url 'district_add' %}">Add the first district</a> to get started.</div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

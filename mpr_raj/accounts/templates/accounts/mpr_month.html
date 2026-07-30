@@ -1,0 +1,98 @@
+{% extends "accounts/app.html" %}
+{% block title %}{{ period }}{% endblock %}
+{% block content %}
+<a href="{% url 'mpr_list' %}" class="btn-ghost btn-back">← Back to monthly reports</a>
+<div class="page-head">
+  <div>
+    <h1 class="pg">{{ period }}</h1>
+    <div class="pg-sub">
+      {% if editable %}Due {{ period.due_date|date:"j F Y" }}
+      {% elif lock %}You locked this month. It is read-only until an admin reopens it.
+      {% else %}This month is closed. Ask an admin to reopen it to make changes.{% endif %}
+    </div>
+  </div>
+  {% if lock %}<span class="status st-navy">Locked</span>
+  {% elif period.is_open %}<span class="status st-green">Open</span>
+  {% else %}<span class="status st-gray">Closed</span>{% endif %}
+</div>
+
+{% if lock %}
+<div class="card lockbar">
+  <span class="material-symbols-outlined" aria-hidden="true">lock</span>
+  <div class="grow">
+    <div class="t-key">
+      Locked on {{ lock.locked_at|date:"j F Y" }} at {{ lock.locked_at|time:"g:i a" }}
+    </div>
+    {% if lock.unlock_requested %}
+    <div class="t-note">
+      Unlock requested. An admin will reopen the month.
+      {% if lock.unlock_reason %}Your reason: “{{ lock.unlock_reason }}”{% endif %}
+    </div>
+    {% else %}
+    <div class="t-note">
+      Need to change something? Ask an admin to reopen the month.
+    </div>
+    {% endif %}
+  </div>
+  {% if not lock.unlock_requested %}
+  <details class="unlock">
+    <summary class="btn-outline">Request unlock</summary>
+    <form method="post" action="{% url 'mpr_unlock_request' period.pk %}">
+      {% csrf_token %}
+      <label for="reason">What needs to change?</label>
+      <textarea id="reason" name="reason" rows="3"
+                placeholder="The training participant count was wrong."></textarea>
+      <button type="submit" class="btn">Send request</button>
+    </form>
+  </details>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if split %}
+{% comment %}
+One report per thing the user owns: their districts, and each project separately.
+Stacking them all here put every section of every report on one page; this asks which
+one they are working on instead.
+{% endcomment %}
+{% for g in groups %}
+<a class="card row" href="{{ g.url }}">
+  <div class="grow">
+    <div class="t-lead">{{ g.label }}</div>
+    <div class="t-note">{{ g.sub }}</div>
+  </div>
+  <span class="status {% if g.count %}st-green{% else %}st-gray{% endif %}">
+    {{ g.count }} entr{{ g.count|pluralize:"y,ies" }}</span>
+  <svg class="chev-end" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+       aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+</a>
+{% endfor %}
+
+{% else %}
+{% for g in groups %}
+{% include "accounts/_mpr_sections.html" %}
+{% empty %}
+<div class="card empty">
+  <div class="t-block">Nothing to fill</div>
+  <div class="t-note">
+    You don't hold a Project Leader or DIO role, so no report is due from you.
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if editable and groups %}
+<div class="card lockbar">
+  <div class="grow">
+    <div class="t-key">Finished with {{ period }}?</div>
+    <div class="t-note">
+      Locking submits {% if split %}every report above{% else %}all {{ filled }}
+      {% if filled == 1 %}entry{% else %}entries{% endif %}{% endif %} for the month.
+      You will need an admin to reopen it.
+    </div>
+  </div>
+  <a href="{% url 'mpr_lock' period.pk %}" class="btn">Lock month</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "accounts/app.html" %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<div class="page-head"><h1 class="pg">Settings</h1></div>
+
+<div class="card w-lg">
+  <div class="t-head">Security</div>
+  <div class="setting-row">
+    <div class="grow">
+      <div class="t-med">Password</div>
+      <div class="t-note">Change the password you use to sign in.</div>
+    </div>
+    <a href="{% url 'password_change' %}" class="btn">Change password</a>
+  </div>
+</div>
+{% endblock %}

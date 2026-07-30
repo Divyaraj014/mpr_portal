@@ -1,0 +1,37 @@
+{% extends "accounts/app.html" %}
+{% block title %}Monthly reports{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="pg">Monthly reports</h1>
+    <div class="pg-sub">Your MPR for each reporting month.</div>
+  </div>
+</div>
+{# Column widths live in app.css, under .tbl-months. #}
+<div class="table tbl-months">
+  <div class="thead">
+    <div>Month</div><div>Due</div><div>Your entries</div><div></div>
+  </div>
+  {% for p in periods %}
+  <div class="trow">
+    <div class="t-key">{{ p }}</div>
+    <div class="t-val">{{ p.due_date|date:"j F Y" }}</div>
+    <div>
+      {% if p.is_open %}<span class="status st-green">Open</span>
+      {% else %}<span class="status st-gray">Closed</span>{% endif %}
+      <span class="t-note">
+        {{ p.mine }} {% if p.mine == 1 %}entry{% else %}entries{% endif %}
+      </span>
+    </div>
+    <a href="{% url 'mpr_month' p.pk %}" class="t-key">
+      {% if p.is_open %}Fill{% else %}View{% endif %}
+    </a>
+  </div>
+  {% empty %}
+  <div class="trow empty">
+    <div class="t-block">No reporting months yet</div>
+    <div class="t-note">An admin opens a month before data entry can start.</div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

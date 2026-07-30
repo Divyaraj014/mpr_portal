@@ -1,0 +1,101 @@
+{% extends "accounts/app.html" %}
+{% block title %}{% if edit_user %}Edit user{% else %}Add user{% endif %}{% endblock %}
+{% block content %}
+<a href="{% url 'user_list' %}" class="btn-ghost btn-back">← Back to users</a>
+<div class="card w-lg">
+  {% if edit_user %}
+  <div class="form-head">
+    <div class="avatar md">{{ edit_user.name|default:edit_user.username|first|upper }}</div>
+    <div class="grow">
+      <div class="t-title">{{ edit_user.name|default:edit_user.username }}</div>
+      <div class="pg-sub">Login ID {{ edit_user.username }}</div>
+    </div>
+    {% if not edit_user.is_active %}<span class="status st-red">Disabled</span>
+    {% elif edit_user.is_activated %}<span class="status st-green">Active</span>
+    {% else %}<span class="status st-gray">Pending first sign-in</span>{% endif %}
+  </div>
+  {% else %}
+  <div class="t-title">Add user</div>
+  <div class="pg-sub">They sign in with a login ID and the temporary password you set here.</div>
+  {% endif %}
+
+  {{ form.non_field_errors }}
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="fsec">
+      <div class="h">Employee details</div>
+      <div class="grid2">
+        {% for field in form.details %}
+        <div>
+          <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="req">*</span>{% endif %}</label>
+          {{ field }}
+          {% if field.help_text %}<div class="helptext">{{ field.help_text }}</div>{% endif %}
+          {{ field.errors }}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="fsec">
+      <div class="h">Sign-in</div>
+      <div class="d">Controls whether this person can get into the portal.</div>
+      <div class="field-narrow">
+        <label for="{{ form.temp_password.id_for_label }}">{{ form.temp_password.label }}{% if form.temp_password.field.required %} <span class="req">*</span>{% endif %}</label>
+        {{ form.temp_password }}
+        <div class="helptext">{{ form.temp_password.help_text }}</div>
+        {{ form.temp_password.errors }}
+      </div>
+      <div class="checks single">
+        <label>{{ form.is_active }} Account enabled</label>
+      </div>
+    </div>
+
+    <div class="fsec">
+      <div class="h">Roles</div>
+      <div class="d">A person can hold more than one. Roles decide what they see after signing in.</div>
+      <div class="checks">
+        <label>{{ form.is_pl }} Project Leader</label>
+        <label>{{ form.is_dio }} District Informatics Officer</label>
+        <label>{{ form.is_sio }} SIO / Additional SIO</label>
+        <label>{{ form.is_staff }} Admin</label>
+      </div>
+    </div>
+
+    <div class="fsec">
+      <div class="h">Assignments</div>
+      <div class="d">What this person reports on each month. Picking one here takes it off whoever held it before.</div>
+      <div class="grid2 roomy">
+        <div>
+          <label class="flush">Projects (as Project Leader)</label>
+          {% if form.projects.field.queryset %}
+          <div class="checks picks">
+            {% for choice in form.projects %}<label>{{ choice.tag }} {{ choice.choice_label }}</label>{% endfor %}
+          </div>
+          {% else %}
+          <div class="helptext"><a href="{% url 'project_add' %}">Add a project</a> first — none exist yet.</div>
+          {% endif %}
+        </div>
+        <div>
+          <label class="flush">Districts (as DIO)</label>
+          {% if form.districts.field.queryset %}
+          <div class="checks picks">
+            {% for choice in form.districts %}<label>{{ choice.tag }} {{ choice.choice_label }}</label>{% endfor %}
+          </div>
+          {% else %}
+          <div class="helptext"><a href="{% url 'district_add' %}">Add a district</a> first — none exist yet.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn">{% if edit_user %}Save changes{% else %}Create user{% endif %}</button>
+      <a href="{% url 'user_list' %}" class="btn-ghost">Cancel</a>
+      {% if delete_url %}
+      <a href="{{ delete_url }}" class="btn-ghost danger push">Delete user</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

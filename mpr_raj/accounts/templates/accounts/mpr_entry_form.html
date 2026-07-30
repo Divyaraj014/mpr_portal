@@ -1,0 +1,23 @@
+{% extends "accounts/app.html" %}
+{% block title %}{{ label }}{% endblock %}
+{% block content %}
+<a href="{% url 'mpr_month' period.pk %}" class="btn-ghost btn-back">← Back to {{ period }}</a>
+<div class="card w-md">
+  <div class="t-title">{{ label }}</div>
+  <div class="pg-sub">{{ period }} · {{ scope_label }}</div>
+  {{ form.non_field_errors }}
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% for field in form %}
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% if field.help_text %}<div class="helptext">{{ field.help_text }}</div>{% endif %}
+    {{ field.errors }}
+    {% endfor %}
+    <div class="actions">
+      <button type="submit" class="btn">Save</button>
+      <a href="{% url 'mpr_month' period.pk %}" class="btn-ghost">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

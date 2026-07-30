@@ -1,0 +1,40 @@
+{% extends "accounts/base.html" %}
+{% load static %}
+{% block title %}Sign in{% endblock %}
+{% block body %}
+<div class="auth-wrap">
+  <div class="auth-box">
+    <div class="auth-head">
+      <img class="logo" src="{% static 'accounts/nic-logo.png' %}" alt="National Informatics Centre" height="60">
+      <div class="t">Sign in to MPR Portal</div>
+      <div class="s">Monthly Project Report · Rajasthan</div>
+    </div>
+    {{ form.non_field_errors }}
+    <form method="post">
+      {% csrf_token %}
+      <label for="{{ form.username.id_for_label }}">Login ID</label>
+      {{ form.username }}
+      {{ form.username.errors }}
+
+      <label for="{{ form.password.id_for_label }}">Password</label>
+      {{ form.password }}
+      {{ form.password.errors }}
+
+      <label for="{{ form.captcha.id_for_label }}">Enter the characters shown</label>
+      {# Both refresh controls are wired up in login.js. #}
+      <div class="captcha-row">
+        <img src="{% url 'captcha_image' %}" alt="Captcha image" width="160" height="55"
+             title="Click to refresh">
+        <a class="captcha-new" href="#">New image</a>
+      </div>
+      {{ form.captcha }}
+      {{ form.captcha.errors }}
+
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit" class="btn btn-block">Sign in</button>
+    </form>
+    <div class="auth-foot">Forgot your password? Contact your NIC administrator.</div>
+  </div>
+</div>
+<script src="{% static 'accounts/login.js' %}" defer></script>
+{% endblock %}

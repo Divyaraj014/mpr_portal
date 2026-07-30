@@ -1,0 +1,38 @@
+{% extends "accounts/app.html" %}
+{% block title %}{{ project.name }}{% endblock %}
+{% block content %}
+<a href="{% url 'mpr_month' period.pk %}" class="btn-ghost btn-back">← Back to {{ period }}</a>
+<div class="page-head">
+  <div>
+    <h1 class="pg">{{ project.name }}</h1>
+    <div class="pg-sub">Monthly figures for {{ period }}. Previous month is carried forward; edit it if it changed.</div>
+  </div>
+</div>
+<form method="post">
+  {% csrf_token %}
+  {{ formset.management_form }}
+  {# Column widths live in app.css, under .tbl-figures. #}
+  <div class="table tbl-figures">
+    <div class="thead figs-head">
+      <div>Parameter</div><div>Previous month</div><div>Reporting month</div><div>Since inception</div>
+    </div>
+    {% for form in formset %}
+    <div class="trow figs">
+      {{ form.id }}
+      <div class="fname">{{ form.instance.parameter.name }}</div>
+      {# Column headers disappear on narrow screens, so each field carries its own label. #}
+      <div><span class="fl">Previous month</span>{{ form.previous_month }}</div>
+      <div><span class="fl">Reporting month</span>{{ form.reporting_month }}</div>
+      <div><span class="fl">Since inception</span>{{ form.cumulative }}</div>
+    </div>
+    {% empty %}
+    <div class="trow empty">
+      <div class="t-note">No parameters defined for this project yet.</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% if editable and formset %}
+  <div class="actions"><button type="submit" class="btn">Save figures</button></div>
+  {% endif %}
+</form>
+{% endblock %}
