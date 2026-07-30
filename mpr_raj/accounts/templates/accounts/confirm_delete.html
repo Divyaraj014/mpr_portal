@@ -12,10 +12,15 @@
     {% for w in warnings %}<div class="status st-red">{{ w }}</div>{% endfor %}
   </div>
   {% endif %}
+  {% if blocked %}
+  <div class="warnings"><div class="status st-red">{{ blocked }}</div></div>
+  <div class="actions"><a href="{{ back_url }}" class="btn">Back</a></div>
+  {% else %}
   <form method="post" class="actions">
     {% csrf_token %}
     <button type="submit" class="btn btn-danger">Delete</button>
     <a href="{{ back_url }}" class="btn-ghost">Cancel</a>
   </form>
+  {% endif %}
 </div>
 {% endblock %}

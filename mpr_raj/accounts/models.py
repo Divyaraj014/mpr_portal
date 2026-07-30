@@ -12,7 +12,7 @@ class District(models.Model):
     name = models.CharField(max_length=100, unique=True)
     # One DIO per district; a DIO may hold several districts (reverse: user.districts).
     officer = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT,
         related_name="districts",
     )
 
@@ -99,12 +99,15 @@ class User(AbstractUser):
     employee_code = models.CharField(max_length=30, blank=True)
     phone = models.CharField(max_length=15, blank=True)
     ip_phone = models.CharField(max_length=15, blank=True)
+    
     # Admin-managed lists, same as District/Department — deleting one leaves the
     # employees behind without a posting/grade rather than taking them with it.
+
     place_of_posting = models.ForeignKey(
         PlaceOfPosting, null=True, blank=True, on_delete=models.SET_NULL,
         related_name="users",
     )
+
     designation = models.ForeignKey(
         Designation, null=True, blank=True, on_delete=models.SET_NULL,
         related_name="users",
@@ -112,6 +115,7 @@ class User(AbstractUser):
 
     # Role flags (a user can hold several). Admin uses Django's is_staff.
     is_sio = models.BooleanField("SIO / Addl. SIO", default=False)
+    is_gl = models.BooleanField("Group Leader", default=False)
     is_pl = models.BooleanField("Project Leader", default=False)
     is_dio = models.BooleanField("DIO", default=False)
 
@@ -133,6 +137,8 @@ class User(AbstractUser):
             roles.append("Admin")
         if self.is_sio:
             roles.append("SIO / Additional SIO")
+        if self.is_gl:
+            roles.append("Group Leader")
         if self.is_pl:
             roles.append("Project Leader")
         if self.is_dio:
@@ -340,7 +346,7 @@ class ParameterValue(models.Model):
 
     period = models.ForeignKey(MPRPeriod, on_delete=models.PROTECT, related_name="parameter_values")
     parameter = models.ForeignKey(
-        ProjectParameter, on_delete=models.PROTECT, related_name="values")
+        ProjectParameter, on_delete=models.CASCADE, related_name="values")
     # ponytail: text, because parameters range from counts to "NA"/"₹ 2.4 Cr".
     # Switch to Decimal if exports need arithmetic on them.
     previous_month = models.CharField(max_length=100, blank=True)

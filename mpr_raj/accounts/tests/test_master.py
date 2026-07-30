@@ -52,12 +52,28 @@ class AdminUserManagementTests(TestCase):
         self.assertContains(resp, "Vahan")
         self.assertTrue(User.objects.filter(pk=emp.pk).exists())
 
+        # Filed entries are PROTECT: the delete is refused, not a 500.
+        resp = self.client.post(reverse("user_delete", args=[emp.pk]))
+        self.assertContains(resp, escape("Can’t delete"))
+        self.assertTrue(User.objects.filter(pk=emp.pk).exists())
+
+        MPREntry.objects.all().delete()
         self.assertRedirects(self.client.post(reverse("user_delete", args=[emp.pk])),
                              reverse("user_list"))
         self.assertFalse(User.objects.filter(pk=emp.pk).exists())
-        self.assertFalse(MPREntry.objects.exists())      # entries cascade
         proj.refresh_from_db()
         self.assertIsNone(proj.leader)                   # project survives, unassigned
+
+    def test_district_officer_blocks_deleting_the_user(self):
+        self.client.force_login(self.admin)
+        dio = User.objects.create_user("some.dio", password="x", is_dio=True)
+        District.objects.create(name="Kota", officer=dio)
+
+        resp = self.client.get(reverse("user_delete", args=[dio.pk]))
+        self.assertContains(resp, "Officer for Kota")
+        resp = self.client.post(reverse("user_delete", args=[dio.pk]))
+        self.assertContains(resp, escape("Can’t delete"))
+        self.assertTrue(User.objects.filter(pk=dio.pk).exists())
 
     def test_admin_cannot_delete_own_account(self):
         self.client.force_login(self.admin)

@@ -1,7 +1,7 @@
 """Admin-managed master data: users, districts, projects (and their monthly
 parameters), and the reporting months themselves."""
 from django.contrib.auth.decorators import user_passes_test
-from django.db.models import Count
+from django.db.models import Count, ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render, resolve_url
 from django.urls import reverse
 
@@ -35,13 +35,19 @@ def user_delete(request, pk):
         # An admin deleting their own account would lock themselves out mid-request.
         return redirect("user_list")
     warnings = []
+    # Entries and districts are PROTECT — they block the delete rather than follow
+    # the user out. Projects are SET_NULL, so those really do just come loose.
     entries = user.mpr_entries.count()
     if entries:
         warnings.append(f"{entries} monthly report {'entry' if entries == 1 else 'entries'} "
-                        "filed by this user will be deleted too.")
-    held = [o.name for o in list(user.projects.all()) + list(user.districts.all())]
-    if held:
-        warnings.append("Left unassigned: " + ", ".join(held) + ".")
+                        "filed by this user — deletion is blocked until they are removed.")
+    districts = [d.name for d in user.districts.all()]
+    if districts:
+        warnings.append("Officer for " + ", ".join(districts) +
+                        " — reassign the district first.")
+    projects = [p.name for p in user.projects.all()]
+    if projects:
+        warnings.append("Left unassigned: " + ", ".join(projects) + ".")
     return _confirm_delete(request, user, "user_list",
                            f"user “{user.name or user.username}”", warnings)
 
@@ -68,11 +74,19 @@ def district_form(request, pk=None):
 
 def _confirm_delete(request, obj, back, label, warnings=()):
     """`back` is anything redirect() takes — a URL name, or a path when it needs args."""
+    blocked = None
     if request.method == "POST":
-        obj.delete()
-        return redirect(back)
+        try:
+            obj.delete()
+            return redirect(back)
+        except ProtectedError as exc:
+            # A PROTECT row still points here (a district's officer, an author's
+            # filed entries). Name what holds it instead of returning a 500.
+            kinds = sorted({str(type(o)._meta.verbose_name_plural) for o in exc.protected_objects})
+            blocked = "Can’t delete — still referenced by " + ", ".join(kinds) + "."
     return render(request, "accounts/confirm_delete.html",
-                  {"obj_label": label, "back_url": resolve_url(back), "warnings": warnings})
+                  {"obj_label": label, "back_url": resolve_url(back),
+                   "warnings": warnings, "blocked": blocked})
 
 
 def _assigned_warning(user):
