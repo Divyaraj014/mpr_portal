@@ -12,16 +12,28 @@ this doc explains the intent so the two don't drift. If you change a value, chan
 
 ## 1. Type
 
-Two families, loaded once via Google Fonts in `base.html`.
+One family: **Inter** (SIL Open Font License 1.1), self-hosted from `static/accounts/fonts/`
+and set once as `--font` in `app.css`. It is built for screens at 12–14px, has tabular
+figures for the number columns (`.tnum`), and carries the rupee sign. Hierarchy comes from
+size and weight (400 body, 500 labels, 600 headings and figures), never a second family.
+Inter is variable in optical size, so large headings tighten on their own — no manual
+letter-spacing. Body base is `14px / 1.5`.
 
-| Role | Font | Where |
-|------|------|-------|
-| Headings, stat numbers | **EB Garamond** (serif, 500/600) | page titles (`h1.pg`, `.page-head .t`), tile values, form card titles |
-| Everything else | **Figtree** (sans, 400–700) | body, labels, buttons, nav, tables, badges |
+| Role | Size / weight | Class |
+|------|---------------|-------|
+| Page title | 24px / 600 | `h1.pg`, `.page-head .t` |
+| Stat tile value | 28px / 600, tabular | `.tile .v` |
+| Card title | 18px / 600 | `.t-title` |
+| Body, table cells | 14px / 400–600 | `.t-key`, `.t-val`, … |
+| Notes, fine print | 13px / 12px | `.t-note`, `.t-fine` |
 
-Serif is deliberate here (brand brief), used **only** for display headings and numbers —
-never for body or UI chrome. Body base is `14px / 1.5`. `system-ui` is the fallback if the
-font CDN is unreachable (relevant on an internal NIC network — see §6).
+The PDF export embeds the same Inter files (see `export.html`).
+
+**Licensing.** Every font shipped must have its licence file next to it in
+`static/accounts/fonts/`: `OFL-Inter.txt` (Inter) and `LICENSE-MaterialSymbols.txt`
+(Apache 2.0, the icons). Both allow government use, self-hosting, and PDF embedding at no
+cost. Don't add a commercial font (Helvetica, Segoe UI, Calibri, Gotham, …) as a file. If
+a Hindi UI is added, use **Noto Sans Devanagari** (also OFL) alongside Inter.
 
 ---
 
@@ -61,10 +73,14 @@ Don't introduce a 4th radius without a reason.
 
 ## 4. Layout
 
-- **App shell** (`app.html`): white sidebar (248px) + white topbar framing a grey rounded
+- **App shell** (`app.html`): white sidebar (256px) + white topbar framing a grey rounded
   content well (`.content`, `--bg`, `border-radius: 24px 0 0 0`). Content max-width 1040px, centered.
 - **Auth pages** (`login`, `password_change`): centered white card (max 400px) on the grey bg.
-- **Sidebar nav:** active item = navy-tint pill. Only the current section is highlighted.
+- **Sidebar nav:** 40px pills; icons and labels share `--slate`. Active item = navy-tint pill,
+  navy label, and a *filled* icon (Material Symbols FILL axis). Staff links sit under an
+  "Administration" heading, which becomes a thin rule on the collapsed 72px icon rail. The
+  collapse button is the menu icon in the top bar; every nav icon is centred 36px from the
+  left in both states.
 - **Mobile (`≤720px`):** sidebar collapses to a horizontal row, tiles stack to one column,
   content well corners round on top.
 
@@ -86,9 +102,8 @@ No scroll animation, no entrance effects, no parallax. This is a data-entry tool
 
 - **Logo:** `accounts/static/accounts/nic-logo.png`, shown on login, password, and sidebar.
   Prefer a transparent PNG (or SVG). Referenced via `{% static %}`.
-- **Fonts load from the Google CDN.** On an air-gapped internal NIC network this request
-  fails and the UI falls back to `system-ui` — still legible, but not the intended type.
-  To guarantee the fonts, self-host the woff2 files and swap the `<link>` for `@font-face`.
+- **Fonts are self-hosted** (`fonts.css`), because the internal NIC network can't reach the
+  Google CDN. `fonts.css` lists the URLs to re-download them from.
 - **Static in production:** `DEBUG=True` serves app static files directly. For `DEBUG=False`,
   run `collectstatic` behind a static file server.
 

@@ -1,18 +1,127 @@
 """Admin-managed master data: users, districts, projects (and their monthly
 parameters), and the reporting months themselves."""
+from urllib.parse import urlencode
+
 from django.contrib.auth.decorators import user_passes_test
 from django.db.models import Count, ProtectedError
+from django.db.models.functions import Lower
 from django.shortcuts import get_object_or_404, redirect, render, resolve_url
 from django.urls import reverse
 
 from ..forms import DistrictForm, PeriodForm, ProjectForm, ProjectParameterForm, UserForm
-from ..models import District, MPRPeriod, Project, ProjectParameter, User
+from ..models import (
+    Department, District, MPRPeriod, PlaceOfPosting, Project, ProjectParameter, User,
+)
 
 admin_required = user_passes_test(lambda u: u.is_staff)
 
+# Which column each sort key orders by, plus the tie-breaker that keeps equal rows
+# in a stable order. Roles has no single column, so it groups by seniority — the
+# same order the flags are listed in User.ROLES.
+# Lower() on the text columns: Postgres sorts by byte value here, which files every
+# lowercase name after every uppercase one — "e-Procurement" landing below
+# "ShalaDarpan" reads as broken to anyone scanning alphabetically.
+USER_SORTS = {
+    "username": ["username"],
+    "name": [Lower("name"), "username"],
+    "designation": [Lower("designation__name"), "username"],
+    "place": [Lower("place_of_posting__name"), "username"],
+    "roles": [f"-{flag}" for flag, _, _ in User.ROLES] + ["username"],
+    "status": ["is_active", "is_activated", "username"],
+}
+USER_COLUMNS = [("username", "Login ID"), ("name", "Name"), ("designation", "Designation"),
+                ("place", "Place of posting"), ("roles", "Roles"), ("status", "Status")]
+STATUS_FILTERS = {
+    "active": {"is_active": True, "is_activated": True},
+    "pending": {"is_active": True, "is_activated": False},
+    "disabled": {"is_active": False},
+}
+
+PROJECT_SORTS = {
+    "code": ["code"],
+    "name": [Lower("name"), "code"],
+    "prism": ["prism_id", "code"],
+    "category": ["category", Lower("name")],
+    "leader": [Lower("leader__name"), "leader__username", "code"],
+}
+PROJECT_COLUMNS = [("code", "Project ID"), ("name", "Name"), ("prism", "PRISM ID"),
+                   ("category", "Category"), ("leader", "Assigned employee")]
+
+
+def _flip(field):
+    """Reverse one order_by term, which may be a "-name" string or a Lower() call."""
+    if hasattr(field, "desc"):
+        return field.desc()
+    return field[1:] if field.startswith("-") else f"-{field}"
+
+
+def _ordering(request, sorts, labels, kept, default):
+    """
+    Read ?sort= and return (order_by fields, header links). Shared by the user and
+    project lists — same table, same behaviour: click a heading to sort by it,
+    click it again to reverse, and the active filters ride along in every link.
+    """
+    sort = request.GET.get("sort", default)
+    key, desc = sort.lstrip("-"), sort.startswith("-")
+    if key not in sorts:
+        key, desc = default, False
+    # Only the leading field flips; the tie-breaker stays put.
+    fields = sorts[key]
+    # ponytail: Postgres puts NULLs last ascending, first descending, so rows
+    # missing the sorted value bunch at one end. Reach for nulls_last only if that
+    # actually bothers anyone.
+    order = [_flip(fields[0]) if desc else fields[0], *fields[1:]]
+    columns = [{
+        "label": label,
+        # Clicking the sorted column reverses it; clicking any other starts ascending.
+        "url": "?" + urlencode({**kept, "sort": f"-{col}" if col == key and not desc else col}),
+        "arrow": ("▼" if desc else "▲") if col == key else "",
+    } for col, label in labels]
+    return order, columns
+
+
 @admin_required
 def user_list(request):
-    return render(request, "accounts/user_list.html", {"users": User.objects.order_by("username")})
+    """
+    Filter and sort in the URL, so a filtered list is a link an admin can bookmark
+    or paste to a colleague. Everything is done in the query — no JS table library,
+    and no pagination until the roster outgrows one page.
+    """
+    users = User.objects.select_related("designation", "place_of_posting")
+
+    role = request.GET.get("role", "")
+    place = request.GET.get("place", "")
+    status = request.GET.get("status", "")
+    if any(role == flag for flag, _, _ in User.ROLES):
+        users = users.filter(**{role: True})
+    if place.isdigit():
+        users = users.filter(place_of_posting=place)
+    if status in STATUS_FILTERS:
+        users = users.filter(**STATUS_FILTERS[status])
+
+    kept = {k: v for k, v in (("role", role), ("place", place), ("status", status)) if v}
+    order, columns = _ordering(request, USER_SORTS, USER_COLUMNS, kept, "username")
+    users = users.order_by(*order)
+
+    return render(request, "accounts/user_list.html", {
+        "users": users,
+        "columns": columns,
+        "filters": [
+            {"name": "role", "label": "Role", "blank": "Any role", "selected": role,
+             "options": [(flag, full) for flag, full, _ in User.ROLES]},
+            {"name": "place", "label": "Place of posting", "blank": "Anywhere",
+             "selected": place,
+             "options": PlaceOfPosting.objects.values_list("pk", "name")},
+            {"name": "status", "label": "Status", "blank": "Any status",
+             "selected": status,
+             "options": [("active", "Active"), ("pending", "Pending first sign-in"),
+                         ("disabled", "Disabled")]},
+        ],
+        "filtered": bool(kept),
+        "showing": len(users),
+        "total": User.objects.count(),
+        "clear_url": "user_list",
+    })
 
 
 @admin_required
@@ -123,8 +232,44 @@ def period_form(request, pk=None):
 
 @admin_required
 def project_list(request):
-    projects = Project.objects.select_related("leader")
-    return render(request, "accounts/project_list.html", {"projects": projects})
+    """Same filter-and-sort-in-the-URL treatment as the user list."""
+    projects = Project.objects.select_related("leader", "department")
+
+    category = request.GET.get("category", "")
+    department = request.GET.get("department", "")
+    leader = request.GET.get("leader", "")
+    if category in dict(Project.CATEGORY_CHOICES):
+        projects = projects.filter(category=category)
+    if department.isdigit():
+        projects = projects.filter(department=department)
+    # Unassigned is the one worth finding: a project with no leader is a project
+    # nobody files an MPR for.
+    if leader in ("assigned", "unassigned"):
+        projects = projects.filter(leader__isnull=leader == "unassigned")
+
+    kept = {k: v for k, v in (("category", category), ("department", department),
+                              ("leader", leader)) if v}
+    order, columns = _ordering(request, PROJECT_SORTS, PROJECT_COLUMNS, kept, "code")
+    projects = projects.order_by(*order)
+
+    return render(request, "accounts/project_list.html", {
+        "projects": projects,
+        "columns": columns,
+        "filters": [
+            {"name": "category", "label": "Category", "blank": "Any category",
+             "selected": category, "options": Project.CATEGORY_CHOICES},
+            {"name": "department", "label": "Department", "blank": "Any department",
+             "selected": department,
+             "options": Department.objects.values_list("pk", "name")},
+            {"name": "leader", "label": "Project Leader", "blank": "Anyone",
+             "selected": leader,
+             "options": [("assigned", "Assigned"), ("unassigned", "Not assigned")]},
+        ],
+        "filtered": bool(kept),
+        "showing": len(projects),
+        "total": Project.objects.count(),
+        "clear_url": "project_list",
+    })
 
 
 @admin_required
@@ -144,6 +289,8 @@ def project_form(request, pk=None):
             form.save()
             return redirect("project_list")
     ctx = {"form": form, "title": "Edit project" if project else "Add project",
+           # The code is assigned by Project.save(), so it's shown, not edited.
+           "subtitle": f"Project ID {project.code}" if project else "",
            "list_url": "project_list", "back_label": "Back to projects",
            "param_form": param_form}
     if project:
@@ -155,8 +302,15 @@ def project_form(request, pk=None):
 @admin_required
 def project_delete(request, pk):
     p = get_object_or_404(Project, pk=pk)
-    return _confirm_delete(request, p, "project_list", f"project “{p.name}”",
-                           _assigned_warning(p.leader))
+    warnings = _assigned_warning(p.leader)
+    # Entries and parameters are PROTECT — they keep the project (and their own
+    # history) alive rather than following it out. Say so before the admin clicks.
+    entries = p.mpr_entries.count()
+    if entries:
+        warnings.append(f"{entries} monthly report {'entry' if entries == 1 else 'entries'} "
+                        "filed against this project — deletion is blocked so the "
+                        "reported data is kept.")
+    return _confirm_delete(request, p, "project_list", f"project “{p.name}”", warnings)
 
 
 @admin_required

@@ -78,7 +78,7 @@ def dashboard(request):
             "my_lock": _lock(user, period),
             "split": len(_my_reports(user)) > 1,
         }
-    if period and (user.is_staff or user.is_sio):
+    if period and user.can_monitor:
         reporters = User.objects.filter(Q(is_pl=True) | Q(is_dio=True)).count()
         ctx |= {
             "reporters": reporters,

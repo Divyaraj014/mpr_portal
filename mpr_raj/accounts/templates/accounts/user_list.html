@@ -5,19 +5,24 @@
   <div class="t">Users</div>
   <a href="{% url 'user_add' %}" class="btn">Add user</a>
 </div>
+
+{% include "accounts/_filters.html" %}
+
 {# Column widths live in app.css, under .tbl-users. #}
 <div class="table tbl-users">
   <div class="thead">
-    <div>Login ID</div><div>Name</div><div>Designation</div><div>Roles</div><div>Status</div><div></div>
+    {% for c in columns %}
+    <a href="{{ c.url }}" class="th-sort">{{ c.label }}<span class="arrow">{{ c.arrow }}</span></a>
+    {% endfor %}
+    <div></div>
   </div>
   {% for u in users %}
   <div class="trow">
     <div class="t-id">{{ u.username }}</div>
     <div class="t-key">{{ u.name|default:"-" }}</div>
     <div class="t-val">{{ u.designation|default:"-" }}</div>
-    <div class="t-val">
-      {% if u.is_staff %}Admin{% if u.is_sio or u.is_pl or u.is_dio %}, {% endif %}{% endif %}{% if u.is_sio %}SIO{% if u.is_pl or u.is_dio %}, {% endif %}{% endif %}{% if u.is_pl %}PL{% if u.is_dio %}, {% endif %}{% endif %}{% if u.is_dio %}DIO{% endif %}
-    </div>
+    <div class="t-val">{{ u.place_of_posting|default:"-" }}</div>
+    <div class="t-val">{{ u.roles_short|default:"-" }}</div>
     <div>
       {% if not u.is_active %}<span class="status st-red">Disabled</span>
       {% elif u.is_activated %}<span class="status st-green">Active</span>
@@ -27,8 +32,13 @@
   </div>
   {% empty %}
   <div class="trow empty">
+    {% if filtered %}
+    <div class="t-block">No users match these filters</div>
+    <div class="t-note"><a href="{% url 'user_list' %}">Clear the filters</a> to see all {{ total }}.</div>
+    {% else %}
     <div class="t-block">No users yet</div>
     <div class="t-note"><a href="{% url 'user_add' %}">Add the first user</a> to get started.</div>
+    {% endif %}
   </div>
   {% endfor %}
 </div>

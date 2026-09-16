@@ -38,7 +38,8 @@ class ProjectParameterInline(admin.TabularInline):
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
-    list_display = ("name", "prism_id", "category", "department", "targeted_user")
+    list_display = ("code", "name", "prism_id", "category", "department", "targeted_user")
+    readonly_fields = ("code",)  # assigned by Project.save()
     list_filter = ("category", "department")
     search_fields = ("name", "prism_id")
     inlines = [ProjectParameterInline]
@@ -102,9 +103,10 @@ class NICUserAdmin(UserAdmin):
                 )
             },
         ),
-        ("Roles", {"fields": ("is_sio", "is_pl", "is_dio")}),
+        ("Roles", {"fields": ("is_sio", "is_gl", "is_pl", "is_dio")}),
         ("Account state", {"fields": ("must_change_password", "is_activated")}),
     )
-    list_display = ("username", "name", "email", "is_staff", "is_sio", "is_pl", "is_dio", "is_activated")
-    list_filter = UserAdmin.list_filter + ("is_sio", "is_pl", "is_dio", "is_activated")
+    list_display = ("username", "name", "email", "is_staff", "is_sio", "is_gl", "is_pl", "is_dio",
+                    "is_activated")
+    list_filter = UserAdmin.list_filter + ("is_sio", "is_gl", "is_pl", "is_dio", "is_activated")
     search_fields = ("username", "name", "email", "employee_code")

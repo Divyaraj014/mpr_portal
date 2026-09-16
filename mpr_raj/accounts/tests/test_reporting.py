@@ -69,7 +69,7 @@ class ReportsTests(TestCase):
                          [["Kavita Bhargava", "eMitra (PR-31)", "National",
                            "Digital India Award", "12-07-2026", "", ""]])
         figures = next(t for t in tables if t["title"] == "Project parameters")
-        self.assertEqual(figures["rows"], [["eMitra", "PR-31", "Kavita Bhargava",
+        self.assertEqual(figures["rows"], [[project.code, "eMitra", "PR-31", "Kavita Bhargava",
                                             "Transactions", "", "9,120", "4,10,332"]])
         # Every section gets a block, even the empty ones.
         self.assertEqual(len(tables), len(MPREntry.KIND_CHOICES) + 1)
@@ -141,4 +141,15 @@ class ReportsTests(TestCase):
         self.assertContains(self.client.get(reverse("report_status")), "Kavita Bhargava")
         self.assertEqual(
             self.client.post(reverse("report_unlock", args=[MPRLock.objects.get().pk])).status_code, 302)
+        self.assertTrue(MPRLock.objects.exists())
+
+    def test_group_leader_monitors_like_an_sio(self):
+        self.lock()
+        gl = User.objects.create_user("gl.one", password="x", is_gl=True,
+                                      must_change_password=False)
+        self.client.force_login(gl)
+        self.assertContains(self.client.get(reverse("report_status")), "Kavita Bhargava")
+        self.assertEqual(self.client.get(reverse("reports")).status_code, 200)
+        # Read-only, same as an SIO: reopening someone's month stays admin-only.
+        self.client.post(reverse("report_unlock", args=[MPRLock.objects.get().pk]))
         self.assertTrue(MPRLock.objects.exists())

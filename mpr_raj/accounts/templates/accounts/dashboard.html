@@ -38,7 +38,7 @@ DIO role gets their own report and the month's progress, in that order.
 </div>
 {% endif %}
 
-{% if user.is_staff or user.is_sio %}
+{% if user.can_monitor %}
 <div class="card row">
   <div class="grow-wide">
     <div class="t-lead tnum">{{ locked }} of {{ reporters }} locked</div>

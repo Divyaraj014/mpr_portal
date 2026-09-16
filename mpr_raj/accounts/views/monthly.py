@@ -63,7 +63,8 @@ def _group(user, period, entries, scope, project):
     rows = [e for e in entries if e.scope == scope and e.project_id == (project.pk if project else None)]
     if project:
         url = reverse("mpr_project_report", args=[period.pk, project.pk])
-        sub = f"{project.get_category_display()} project · {project.prism_id}"
+        # The code, not the PRISM ID — every project has one, most have no PRISM ID.
+        sub = f"{project.get_category_display()} project · {project.code}"
     else:
         url = reverse("mpr_district_report", args=[period.pk])
         held = ", ".join(d.name for d in user.districts.all())

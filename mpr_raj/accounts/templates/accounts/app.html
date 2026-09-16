@@ -7,6 +7,9 @@ page renders into. Pages extend this and fill {% block content %}.
 {% block body %}
 <div class="app">
   <header class="topbar">
+    <button type="button" class="icon-btn sb-toggle" aria-label="Collapse sidebar" aria-controls="sidebar" aria-expanded="true">
+      <span class="material-symbols-outlined" aria-hidden="true">menu</span>
+    </button>
     <a class="brand" href="{% url 'dashboard' %}">
       <img class="logo" src="{% static 'accounts/nic-logo.png' %}" alt="National Informatics Centre" height="34">
       <div class="brand-text">
@@ -20,60 +23,53 @@ page renders into. Pages extend this and fill {% block content %}.
     </button>
   </header>
   <div class="shell">
-  <aside class="sidebar">
-    <nav>
-      <button type="button" class="sb-toggle" aria-label="Toggle sidebar" aria-pressed="false" title="Collapse sidebar">
-        <span class="material-symbols-outlined" aria-hidden="true">menu_open</span>
-      </button>
-      <a href="{% url 'dashboard' %}" title="Dashboard" {% if request.resolver_match.url_name == 'dashboard' %}class="active"{% endif %}>
-        <span class="material-symbols-outlined" aria-hidden="true">grid_view</span>
+  <aside class="sidebar" id="sidebar">
+    {% comment %}
+    Icons are outlined at rest and fill when their page is open (FILL axis, see app.css).
+    Master data used to hide behind a "Manage" disclosure; with four links it cost a click
+    and, on the icon rail, looked like four more top-level pages. Now it is a labelled group.
+    {% endcomment %}
+    {% with n=request.resolver_match.url_name %}
+    <nav aria-label="Main">
+      <a href="{% url 'dashboard' %}" title="Dashboard" {% if n == 'dashboard' %}class="active" aria-current="page"{% endif %}>
+        <span class="material-symbols-outlined" aria-hidden="true">space_dashboard</span>
         <span>Dashboard</span>
       </a>
       {% if user.is_pl or user.is_dio %}
-      <a href="{% url 'mpr_list' %}" title="Monthly reports" {% if 'mpr' in request.resolver_match.url_name %}class="active"{% endif %}>
-        <span class="material-symbols-outlined" aria-hidden="true">edit_note</span>
+      <a href="{% url 'mpr_list' %}" title="Monthly reports" {% if 'mpr' in n %}class="active" aria-current="page"{% endif %}>
+        <span class="material-symbols-outlined" aria-hidden="true">edit_document</span>
         <span>Monthly reports</span>
       </a>
       {% endif %}
-      {% if user.is_staff or user.is_sio %}
-      <a href="{% url 'reports' %}" title="Reports" {% if request.resolver_match.url_name|slice:":6" == 'report' %}class="active"{% endif %}>
-        <span class="material-symbols-outlined" aria-hidden="true">lab_profile</span>
+      {% if user.can_monitor %}
+      <a href="{% url 'reports' %}" title="Reports" {% if n|slice:":6" == 'report' %}class="active" aria-current="page"{% endif %}>
+        <span class="material-symbols-outlined" aria-hidden="true">analytics</span>
         <span>Reports</span>
       </a>
       {% endif %}
       {% if user.is_staff %}
-      {% with n=request.resolver_match.url_name %}
-      {% comment %}
-      Master data behind one disclosure. Native <details>, like the account menu —
-      it opens itself when you're already on one of its pages, so the active item
-      is never hidden.
-      {% endcomment %}
-      <details class="nav-sub" {% if 'user' in n or 'project' in n or 'district' in n or 'period' in n %}open{% endif %}>
-        <summary title="Manage">
-          <span class="material-symbols-outlined" aria-hidden="true">tune</span>
-          <span>Manage</span>
-          <svg class="nav-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </summary>
-        <a href="{% url 'user_list' %}" title="Users" {% if 'user' in n %}class="active"{% endif %}>
+      <div class="nav-group" role="group" aria-labelledby="nav-admin">
+        <div class="nav-label" id="nav-admin">Administration</div>
+        <a href="{% url 'user_list' %}" title="Users" {% if 'user' in n %}class="active" aria-current="page"{% endif %}>
           <span class="material-symbols-outlined" aria-hidden="true">group</span>
           <span>Users</span>
         </a>
-        <a href="{% url 'project_list' %}" title="Projects" {% if 'project' in n %}class="active"{% endif %}>
-          <span class="material-symbols-outlined" aria-hidden="true">description</span>
+        <a href="{% url 'project_list' %}" title="Projects" {% if 'project' in n %}class="active" aria-current="page"{% endif %}>
+          <span class="material-symbols-outlined" aria-hidden="true">folder</span>
           <span>Projects</span>
         </a>
-        <a href="{% url 'district_list' %}" title="Districts" {% if 'district' in n %}class="active"{% endif %}>
-          <span class="material-symbols-outlined" aria-hidden="true">location_on</span>
+        <a href="{% url 'district_list' %}" title="Districts" {% if 'district' in n %}class="active" aria-current="page"{% endif %}>
+          <span class="material-symbols-outlined" aria-hidden="true">map</span>
           <span>Districts</span>
         </a>
-        <a href="{% url 'period_list' %}" title="Reporting months" {% if 'period' in n %}class="active"{% endif %}>
+        <a href="{% url 'period_list' %}" title="Reporting months" {% if 'period' in n %}class="active" aria-current="page"{% endif %}>
           <span class="material-symbols-outlined" aria-hidden="true">calendar_month</span>
           <span>Reporting months</span>
         </a>
-      </details>
-      {% endwith %}
+      </div>
       {% endif %}
     </nav>
+    {% endwith %}
 
     <div class="acct">
       <details class="acct-menu">

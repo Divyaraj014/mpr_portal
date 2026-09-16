@@ -62,14 +62,14 @@ def tables(period, only=None):
     for value in values:
         project = value.parameter.project
         leader = project.leader
-        rows.append([project.name, project.prism_id,
+        rows.append([project.code, project.name, project.prism_id or "",
                      leader.name or leader.username if leader else "",
                      value.parameter.name,
                      value.previous_month, value.reporting_month, value.cumulative])
     out.append({
         "key": PARAMETERS,
         "title": "Project parameters",
-        "headers": ["Project", "PRISM ID", "Project Leader", "Parameter",
+        "headers": ["Project ID", "Project", "PRISM ID", "Project Leader", "Parameter",
                     "Previous month", "Reporting month", "Cumulative since inception"],
         "rows": rows,
     })
@@ -161,10 +161,12 @@ def _pdf(period, tabs):
     from weasyprint import HTML
 
     logo = finders.find("accounts/nic-logo.png")
+    fonts = finders.find("accounts/fonts/inter-latin.woff2")
     html = render_to_string("accounts/export.html", {
         "period": period,
         "tables": tabs,
         "logo": Path(logo).as_uri() if logo else None,
+        "fonts": Path(fonts).parent.as_uri() if fonts else "",
         "generated": timezone.localdate(),
     })
     return HTML(string=html).write_pdf(), "application/pdf"

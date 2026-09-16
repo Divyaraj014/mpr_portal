@@ -50,7 +50,7 @@ class DistrictForm(forms.ModelForm):
 
 class ProjectForm(forms.ModelForm):
     leader = EmployeeChoiceField(
-        label="Assigned employee",
+        label="Project Leader",
         queryset=User.objects.order_by("name", "username"),
         required=False,
         empty_label="— None —",
@@ -60,6 +60,11 @@ class ProjectForm(forms.ModelForm):
     class Meta:
         model = Project
         fields = ["name", "prism_id", "category", "department", "targeted_user", "url", "leader"]
+        help_texts = {"prism_id": "Leave blank if this project has no PRISM ID yet."}
+
+    def clean_prism_id(self):
+        # "" would collide with every other blank one on the unique index; NULL won't.
+        return self.cleaned_data["prism_id"] or None
 
 
 class PeriodForm(forms.ModelForm):
@@ -152,7 +157,7 @@ class UserForm(forms.ModelForm):
         model = User
         fields = [
             "email", "name", "employee_code", "designation", "phone",
-            "ip_phone", "place_of_posting", "is_staff", "is_sio", "is_pl",
+            "ip_phone", "place_of_posting", "is_staff", "is_sio", "is_gl", "is_pl",
             "is_dio", "is_active",
         ]
         labels = {"is_staff": "Admin", "is_active": "Account enabled", "ip_phone": "IP phone"}

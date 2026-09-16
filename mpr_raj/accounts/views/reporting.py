@@ -11,7 +11,7 @@ from ..models import MPREntry, MPRLock, MPRPeriod, ParameterValue, User
 
 
 # is_authenticated first: AnonymousUser carries is_staff but not our role flags.
-monitor_required = user_passes_test(lambda u: u.is_authenticated and (u.is_staff or u.is_sio))
+monitor_required = user_passes_test(lambda u: u.is_authenticated and u.can_monitor)
 
 
 def _pick_period(request):
@@ -101,8 +101,8 @@ def report_status(request):
             "requests": sum(1 for r in rows if r["lock"] and r["lock"].unlock_requested),
             # Driven by the section count, so adding one stays "a new dict entry".
             "cols": ("minmax(140px, 1.4fr) minmax(215px, auto) "
-                     f"repeat({len(kinds)}, 60px) 66px"),
-            "grid_width": f"{620 + 60 * len(kinds)}px",
+                     f"repeat({len(kinds)}, 80px) 66px"),
+            "grid_width": f"{620 + 80 * len(kinds)}px",
         }
     return render(request, "accounts/report_status.html", ctx)
 

@@ -24,6 +24,7 @@
    ========================================================================== */
 
 :root {
+  --font: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --navy: #1B4B8A; --navy-d: #16406F; --navy-tint: #E7EEF8;
   --ink: #1F1F1F; --slate: #444746; --muted: #5F6368; --faint: #9AA0A6;
   --border: #E1E3E1; --divider: #EDEFF2; --bg: #F0F4F9; --surface: #FFFFFF;
@@ -57,7 +58,7 @@ html[data-theme="dark"] .btn-danger:hover { background: #F6C6C2; }
 
 * { box-sizing: border-box; }
 body { margin: 0; min-height: 100vh; background: var(--surface); color: var(--ink);
-       font: 400 14px/1.5 Figtree, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+       font: 400 14px/1.5 var(--font); -webkit-font-smoothing: antialiased; }
 input, select, button, textarea { font-family: inherit; }
 ::placeholder { color: var(--faint); }
 a { color: var(--navy); text-decoration: none; }
@@ -86,7 +87,7 @@ button, a, .card, input, body, .topbar, .content, .table, .tile, .sec, .trow {
    properties are the app's deltas on top of it. */
 .material-symbols-outlined {
   font-size: 22px; direction: ltr;
-  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  font-variation-settings: "FILL" 0;   /* the only axis the subset keeps */
 }
 
 /* ==========================================================================
@@ -96,22 +97,20 @@ button, a, .card, input, body, .topbar, .content, .table, .tile, .sec, .trow {
    the job it does. Pick a class; don't write a `font:` in HTML.
    ========================================================================== */
 
-.serif { font-family: "EB Garamond", Georgia, serif; letter-spacing: 0; }
+h1.pg, .page-head .t { font: 600 24px/1.25 var(--font); margin: 0; }
+.pg-sub { font: 400 14px var(--font); color: var(--muted); margin-top: 4px; }
 
-h1.pg, .page-head .t { font: 600 28px/1.25 "EB Garamond", Georgia, serif; margin: 0; }
-.pg-sub { font: 400 14px Figtree, sans-serif; color: var(--muted); margin-top: 4px; }
-
-.t-title { font: 600 22px "EB Garamond", Georgia, serif; }   /* a card's own title */
-.t-lead  { font: 600 20px "EB Garamond", Georgia, serif; color: var(--ink); }
-.t-head  { font: 600 16px Figtree, sans-serif; }             /* section heading */
-.t-block { font: 600 15px Figtree, sans-serif; }             /* block / empty-state heading */
-.t-key   { font: 600 14px Figtree, sans-serif; }             /* a row's primary value */
-.t-med   { font: 500 14px Figtree, sans-serif; }
-.t-val   { font: 400 14px Figtree, sans-serif; color: var(--muted); }
-.t-id    { font: 500 14px Figtree, sans-serif; color: var(--muted); }  /* login ID, PRISM ID */
-.t-label { font: 500 13px Figtree, sans-serif; }
-.t-note  { font: 400 13px Figtree, sans-serif; color: var(--muted); }  /* explains the line above */
-.t-fine  { font: 400 12px Figtree, sans-serif; color: var(--muted); }  /* smallest print */
+.t-title { font: 600 18px var(--font); }              /* a card's own title */
+.t-lead  { font: 600 17px var(--font); color: var(--ink); }
+.t-head  { font: 600 16px var(--font); }             /* section heading */
+.t-block { font: 600 15px var(--font); }             /* block / empty-state heading */
+.t-key   { font: 600 14px var(--font); }             /* a row's primary value */
+.t-med   { font: 500 14px var(--font); }
+.t-val   { font: 400 14px var(--font); color: var(--muted); }
+.t-id    { font: 500 14px var(--font); color: var(--muted); }  /* login ID, PRISM ID */
+.t-label { font: 500 13px var(--font); }
+.t-note  { font: 400 13px var(--font); color: var(--muted); }  /* explains the line above */
+.t-fine  { font: 400 12px var(--font); color: var(--muted); }  /* smallest print */
 
 .quiet { color: var(--muted); }
 .faint { color: var(--faint); }
@@ -122,8 +121,8 @@ h1.pg, .page-head .t { font: 600 28px/1.25 "EB Garamond", Georgia, serif; margin
 :is(.t-title, .t-lead, .t-head, .t-block, .t-key, .t-med) + .t-note { margin-top: 4px; }
 .t-title + p { margin: 8px 0 0; }
 
-.errorlist { list-style: none; margin: 8px 0 0; padding: 0; font: 400 13px Figtree, sans-serif; color: var(--red); }
-.helptext, .helptext ul { font: 400 12px Figtree, sans-serif; color: var(--muted); margin: 6px 0 0; padding-left: 0; }
+.errorlist { list-style: none; margin: 8px 0 0; padding: 0; font: 400 13px var(--font); color: var(--red); }
+.helptext, .helptext ul { font: 400 12px var(--font); color: var(--muted); margin: 6px 0 0; padding-left: 0; }
 .helptext ul { padding-left: 18px; }
 
 /* ==========================================================================
@@ -163,7 +162,7 @@ h1.pg, .page-head .t { font: 600 28px/1.25 "EB Garamond", Georgia, serif; margin
    5. Forms
    ========================================================================== */
 
-label { display: block; font: 500 13px Figtree, sans-serif; color: var(--slate); margin: 16px 0 6px; }
+label { display: block; font: 500 13px var(--font); color: var(--slate); margin: 16px 0 6px; }
 label.flush { margin-top: 0; }
 .req { color: var(--red); }   /* the * on a required field */
 
@@ -181,19 +180,29 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--navy); outline-
 
 .captcha-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
 .captcha-row img { border: 1px solid var(--border); border-radius: 12px; cursor: pointer; }
-.captcha-row a { font: 500 13px Figtree, sans-serif; }
+.captcha-row a { font: 500 13px var(--font); }
 
 /* Month selector in a page head — label and select share one line. */
 .period-picker { display: flex; align-items: center; gap: 10px; }
 .period-picker label { margin: 0; }
 .period-picker select { width: auto; }
 
+/* A row of GET filters above a table. Wraps to a second line on narrow screens
+   rather than squeezing the selects. */
+.filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-bottom: 16px; }
+.filters label { display: block; margin: 0 0 4px; font: 600 12px var(--font); color: var(--muted); }
+/* max-width so the posting list — which holds names like "Regional Application
+   Security and Audit Division,Jaipur" — doesn't stretch the row onto two lines. */
+.filters select { width: auto; min-width: 160px; max-width: 240px; }
+.filter-count { font: 400 13px var(--font); color: var(--muted); padding-bottom: 10px; }
+.filter-count a { margin-left: 8px; }
+
 /* ==========================================================================
    6. Buttons
    ========================================================================== */
 
 .btn { display: inline-block; background: var(--navy); color: #fff; border: none;
-       border-radius: 999px; padding: 10px 22px; font: 600 14px Figtree, sans-serif;
+       border-radius: 999px; padding: 10px 22px; font: 600 14px var(--font);
        cursor: pointer; }
 .btn:hover { background: var(--navy-d); text-decoration: none; box-shadow: var(--shadow); }
 .btn:active { transform: scale(.98); }
@@ -203,10 +212,10 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--navy); outline-
 /* Secondary action: outlined pill. Seven navy buttons down one page is a shouting match. */
 .btn-outline { display: inline-block; background: var(--surface); border: 1px solid var(--border);
                color: var(--navy); border-radius: 999px; padding: 8px 18px;
-               font: 600 13px Figtree, sans-serif; cursor: pointer; }
+               font: 600 13px var(--font); cursor: pointer; }
 .btn-outline:hover { background: var(--navy-tint); border-color: transparent; text-decoration: none; }
 .btn-outline:active { transform: scale(.98); }
-.btn-ghost { background: none; border: none; color: var(--muted); font: 500 13px Figtree, sans-serif;
+.btn-ghost { background: none; border: none; color: var(--muted); font: 500 13px var(--font);
              cursor: pointer; padding: 6px 12px; border-radius: 999px; }
 .btn-ghost:hover { background: var(--hover); color: var(--ink); text-decoration: none; }
 /* A ghost button that keeps its colour on hover, because the colour is the warning. */
@@ -227,7 +236,7 @@ a.card:hover { text-decoration: none; background: var(--navy-tint); border-color
                transform: translateY(-2px); box-shadow: var(--shadow); }
 a.card:active { transform: translateY(0); }
 
-.status { display: inline-flex; align-items: center; font: 500 12px Figtree, sans-serif;
+.status { display: inline-flex; align-items: center; font: 500 12px var(--font);
           padding: 3px 12px; border-radius: 999px; }
 .st-green { color: var(--green); background: var(--st-green-bg); }
 .st-gray { color: var(--muted); background: var(--st-gray-bg); }
@@ -239,11 +248,15 @@ a.card:active { transform: translateY(0); }
 
 .table { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
 .thead, .trow { display: grid; align-items: center; padding: 10px 20px; }
-.thead { border-bottom: 1px solid var(--border); font: 600 12px Figtree, sans-serif; color: var(--muted); }
+.thead { border-bottom: 1px solid var(--border); font: 600 12px var(--font); color: var(--muted); }
 .trow { padding: 14px 20px; }
 .trow + .trow { border-top: 1px solid var(--divider); }
-.thead > div, .trow > div { min-width: 0; overflow: hidden; text-overflow: ellipsis;
+.thead > div, .thead > a, .trow > div { min-width: 0; overflow: hidden; text-overflow: ellipsis;
                             white-space: nowrap; padding-right: 10px; }
+/* A heading that sorts the table. Reads as a heading until you point at it. */
+.th-sort { color: inherit; }
+.th-sort:hover { color: var(--navy); }
+.th-sort .arrow { padding-left: 4px; font-size: 10px; }
 /* Cells holding sentences rather than labels get to use several lines. */
 .trow > .wrap { white-space: normal; }
 /* A row that is itself the link — the label you read is the target you hit. */
@@ -258,8 +271,17 @@ a.rowlink:focus-visible { outline: 2px solid var(--navy); outline-offset: -2px; 
    because the view computes them from the data. */
 .tbl-months :is(.thead, .trow),
 .tbl-periods :is(.thead, .trow)   { grid-template-columns: 1.4fr 1.2fr 1fr 0.8fr; }
-.tbl-users :is(.thead, .trow)     { grid-template-columns: 1.3fr 1.4fr 1.2fr 1.4fr 1.1fr 100px; }
-.tbl-projects :is(.thead, .trow)  { grid-template-columns: 1.8fr 1.1fr 0.9fr 1.6fr 60px; }
+.tbl-users :is(.thead, .trow)     { grid-template-columns: 1.1fr 1.3fr 1.1fr 1.3fr 0.9fr 1fr 70px; }
+.tbl-projects :is(.thead, .trow)  { grid-template-columns: 80px 1.8fr 1.1fr 0.9fr 1.6fr 60px; }
+/* The two long lists hold real names — "Regional Application Security and Audit
+   Division,Jaipur", "Digital India Land Records Modernization Programme" — which
+   is exactly what an ellipsis eats. Wrap instead: a taller row beats an
+   unreadable one. overflow-wrap so single long tokens break too, since
+   "vishwanath.sharma" and "Officer/Engineer-SB" have no space to wrap at. */
+:is(.tbl-users, .tbl-projects) :is(.thead, .trow) > :is(.t-id, .t-key, .t-val, .th-sort) {
+    white-space: normal; overflow-wrap: anywhere; }
+:is(.tbl-users, .tbl-projects) .trow { align-items: start; }
+:is(.tbl-users, .tbl-projects) .trow > .status { margin-top: -2px; }
 .tbl-districts :is(.thead, .trow) { grid-template-columns: 1.2fr 1.8fr 60px; }
 .tbl-reports :is(.thead, .trow)   { grid-template-columns: 1fr 90px 24px; }
 .tbl-figures :is(.thead, .trow)   { grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 10px; }
@@ -272,8 +294,8 @@ a.rowlink:focus-visible { outline: 2px solid var(--navy); outline-offset: -2px; 
 
 .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; }
-.tile .v { font: 600 30px "EB Garamond", Georgia, serif; font-variant-numeric: tabular-nums; }
-.tile .l { font: 400 13px Figtree, sans-serif; color: var(--muted); margin-top: 4px; }
+.tile .v { font: 600 28px/1.2 var(--font); font-variant-numeric: tabular-nums; }
+.tile .l { font: 400 13px var(--font); color: var(--muted); margin-top: 4px; }
 
 /* ==========================================================================
    8. Page blocks
@@ -282,7 +304,7 @@ a.rowlink:focus-visible { outline: 2px solid var(--navy); outline-offset: -2px; 
 /* --- MPR month: one native <details> section per MPR category --------------- */
 .sec { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; margin-bottom: 12px; }
 .sec > summary { display: flex; align-items: center; gap: 12px; list-style: none; cursor: pointer;
-                 padding: 16px 20px; font: 600 15px Figtree, sans-serif; border-radius: 16px; }
+                 padding: 16px 20px; font: 600 15px var(--font); border-radius: 16px; }
 .sec > summary::-webkit-details-marker { display: none; }
 .sec > summary:hover { background: var(--hover); }
 .sec > summary .chev { color: var(--faint); flex-shrink: 0; transition: transform .15s ease; }
@@ -304,19 +326,19 @@ a.rowlink:focus-visible { outline: 2px solid var(--navy); outline-offset: -2px; 
 }
 .erow { display: flex; align-items: flex-start; gap: 14px; padding: 14px 20px;
         border-top: 1px solid var(--divider); }
-.erow .hl { font: 600 14px Figtree, sans-serif; }
+.erow .hl { font: 600 14px var(--font); }
 .erow .meta { display: flex; flex-wrap: wrap; gap: 2px 20px; margin-top: 5px;
-              font: 400 13px Figtree, sans-serif; color: var(--muted); }
+              font: 400 13px var(--font); color: var(--muted); }
 .erow .meta b { font-weight: 500; color: var(--slate); }
 .erow form { display: inline; }
 .erow img { border-radius: 12px; object-fit: cover; flex-shrink: 0; }
 .erow .acts { display: flex; gap: 4px; flex-shrink: 0; }
 .sec-foot { display: flex; align-items: center; gap: 14px; padding: 16px 20px;
             border-top: 1px solid var(--divider); }
-.sec-foot .hint { font: 400 13px Figtree, sans-serif; color: var(--muted); }
+.sec-foot .hint { font: 400 13px var(--font); color: var(--muted); }
 /* Figures table: numbers line up column-wise for whoever compiles them. */
 .figs input { text-align: right; font-variant-numeric: tabular-nums; }
-.figs .fname { font: 500 14px Figtree, sans-serif; white-space: normal; }
+.figs .fname { font: 500 14px var(--font); white-space: normal; }
 .figs .fl { display: none; }
 
 /* --- Lock state: banner on the month page, and the month's closing action --- */
@@ -341,13 +363,13 @@ a.rowlink:focus-visible { outline: 2px solid var(--navy); outline-offset: -2px; 
 .req-row { padding: 10px 0; border-top: 1px solid var(--divider); }
 .t-key + .req-row { margin-top: 10px; }
 /* Section label above a group of blocks that isn't a card of its own. */
-.section-label { font: 600 14px Figtree, sans-serif; letter-spacing: -.01em; margin: 26px 0 12px; }
+.section-label { font: 600 14px var(--font); letter-spacing: -.01em; margin: 26px 0 12px; }
 
 /* --- Long admin form: titled sections with a rule between them -------------- */
 .form-head { display: flex; align-items: center; gap: 14px; }
 .fsec { margin-top: 26px; padding-top: 24px; border-top: 1px solid var(--border); }
-.fsec .h { font: 600 15px Figtree, sans-serif; color: var(--ink); }
-.fsec .d { font: 400 13px Figtree, sans-serif; color: var(--muted); margin-top: 2px; }
+.fsec .h { font: 600 15px var(--font); color: var(--ink); }
+.fsec .d { font: 400 13px var(--font); color: var(--muted); margin-top: 2px; }
 .fsec > .checks { margin-top: 14px; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
 .grid2.roomy { gap: 24px 20px; margin-top: 14px; }
@@ -356,7 +378,7 @@ a.rowlink:focus-visible { outline: 2px solid var(--navy); outline-offset: -2px; 
 
 .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
 .checks label { display: flex; align-items: center; gap: 8px; margin: 0;
-                font: 400 14px Figtree, sans-serif; color: var(--ink); }
+                font: 400 14px var(--font); color: var(--ink); }
 .checks input { width: auto; accent-color: var(--navy); }
 .checks.single { grid-template-columns: 1fr; margin-top: 16px; }
 /* Assignment lists grow with the master data — one column, scroll past ~6 items. */
@@ -373,8 +395,8 @@ a.rowlink:focus-visible { outline: 2px solid var(--navy); outline-offset: -2px; 
 .detail { display: grid; grid-template-columns: 180px 1fr; margin-top: 24px;
           border-top: 1px solid var(--border); }
 .detail > div { padding: 12px 4px; border-bottom: 1px solid var(--divider); min-width: 0; }
-.detail .k { font: 500 13px Figtree, sans-serif; color: var(--muted); }
-.detail .val { font: 500 14px Figtree, sans-serif; color: var(--ink); overflow-wrap: anywhere; }
+.detail .k { font: 500 13px var(--font); color: var(--muted); }
+.detail .val { font: 500 14px var(--font); color: var(--ink); overflow-wrap: anywhere; }
 .detail + .t-note { margin-top: 20px; }
 
 /* Its own breakpoint: two 180px-labelled columns give up well before the shell does. */
@@ -390,7 +412,7 @@ a.rowlink:focus-visible { outline: 2px solid var(--navy); outline-offset: -2px; 
 
 .avatar { width: 34px; height: 34px; border-radius: 50%; color: #fff; background: var(--navy);
           display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-          font: 600 13px Figtree, sans-serif; }
+          font: 600 13px var(--font); }
 .avatar.md { width: 44px; height: 44px; font-size: 16px; }
 .avatar.lg { width: 56px; height: 56px; font-size: 20px; }
 
@@ -403,9 +425,9 @@ a.rowlink:focus-visible { outline: 2px solid var(--navy); outline-offset: -2px; 
 .auth-box { width: 100%; max-width: 400px; background: var(--surface); border-radius: 24px; padding: 40px 36px; }
 .auth-head { text-align: center; margin-bottom: 26px; }
 .auth-head .logo { margin-bottom: 18px; }
-.auth-head .t { font: 600 26px/1.2 "EB Garamond", Georgia, serif; }
-.auth-head .s { font: 400 13px Figtree, sans-serif; color: var(--muted); margin-top: 6px; }
-.auth-foot { text-align: center; font: 400 13px Figtree, sans-serif; color: var(--muted); margin-top: 26px; }
+.auth-head .t { font: 600 22px/1.25 var(--font); }
+.auth-head .s { font: 400 13px var(--font); color: var(--muted); margin-top: 6px; }
+.auth-foot { text-align: center; font: 400 13px var(--font); color: var(--muted); margin-top: 26px; }
 
 /* ==========================================================================
    10. App shell: top bar (logo) + white sidebar + grey rounded content well
@@ -416,17 +438,19 @@ a.rowlink:focus-visible { outline: 2px solid var(--navy); outline-offset: -2px; 
 .app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
 /* Top bar: logo + wordmark only, aligned above the nav rail. */
-.topbar { display: flex; align-items: center; height: 60px; padding: 0 20px;
+.topbar { display: flex; align-items: center; height: 60px; padding: 0 20px 0 16px;
           background: var(--surface); flex-shrink: 0; }
 .topbar .brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
 .topbar .brand:hover { text-decoration: none; }
-.topbar .brand .bn { font: 600 16px Figtree, sans-serif; line-height: 1.15; color: var(--ink); }
-.topbar .brand .bs { font: 400 12px Figtree, sans-serif; color: var(--muted); margin-top: 1px; }
-/* Theme toggle: sits at the far end of the top bar, on every signed-in page. */
-.icon-btn { display: inline-flex; align-items: center; justify-content: center;
-            width: 40px; height: 40px; margin-left: auto; border: none; background: none;
-            border-radius: 999px; color: var(--muted); cursor: pointer; }
+.topbar .brand .bn { font: 600 16px var(--font); line-height: 1.15; color: var(--ink); }
+.topbar .brand .bs { font: 400 12px var(--font); color: var(--muted); margin-top: 1px; }
+/* Round icon buttons in the top bar: the drawer toggle on the left, theme on the right. */
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+            width: 40px; height: 40px; border: none; background: none;
+            border-radius: 999px; color: var(--slate); cursor: pointer; }
 .icon-btn:hover { background: var(--hover); color: var(--ink); }
+.sb-toggle { margin-right: 8px; }
+.theme-toggle { margin-left: auto; }
 .ic-light { display: none; }
 html[data-theme="dark"] .ic-dark { display: none; }
 html[data-theme="dark"] .ic-light { display: inline-block; }
@@ -440,50 +464,33 @@ html[data-theme="dark"] .logo { filter: brightness(1.15); }
            display: flex; flex-direction: column;
            transition: width .24s cubic-bezier(.2, 0, 0, 1), background-color .18s ease; }
 
-.sidebar nav { padding: 12px; display: flex; flex-direction: column; gap: 2px; flex: 1; }
-
-/* Drawer toggle lives at the top of the nav rail, styled like the nav items. */
-.sb-toggle { display: flex; align-items: center; gap: 16px; width: 100%;
-             padding: 9px 16px; margin-bottom: 4px; border: none; background: none;
-             border-radius: 999px; font: inherit; color: var(--slate); cursor: pointer; }
-.sb-toggle .material-symbols-outlined { flex-shrink: 0; font-size: 22px; color: var(--muted);
-  transition: transform .24s cubic-bezier(.2, 0, 0, 1), color .18s ease; }
-.sb-toggle:hover { background: var(--hover); color: var(--ink); }
-.sb-toggle:hover .material-symbols-outlined { color: var(--slate); }
-.sidebar nav a { display: flex; align-items: center; gap: 16px; border-radius: 999px;
-                 padding: 9px 16px; font: 500 14px Figtree, sans-serif; color: var(--slate);
+/* One column of 40px pills. Every icon's centre sits 36px from the left edge —
+   the same line as the top-bar toggle and the middle of the 72px collapsed rail,
+   so icons don't jump sideways when the drawer folds. */
+.sidebar nav, .nav-group { display: flex; flex-direction: column; gap: 2px; }
+.sidebar nav { padding: 4px 12px 12px; flex: 1; }
+.sidebar nav a { display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 14px;
+                 border-radius: 999px; font: 500 14px var(--font); color: var(--slate);
                  white-space: nowrap; }
-.sidebar nav a .material-symbols-outlined { flex-shrink: 0; font-size: 22px; color: var(--muted); }
+.sidebar nav a .material-symbols-outlined { flex-shrink: 0; font-size: 20px; }
 .sidebar nav a:hover { background: var(--hover); color: var(--ink); text-decoration: none; }
-.sidebar nav a:hover .material-symbols-outlined { color: var(--slate); }
+.sidebar nav a:focus-visible { outline-offset: -2px; }
+/* Current page: navy pill, and its icon fills — shape as well as colour, so the
+   state still reads for anyone who can't tell the tint from the hover grey. */
 .sidebar nav a.active { background: var(--navy-tint); color: var(--navy); font-weight: 600; }
-.sidebar nav a.active .material-symbols-outlined { color: var(--navy);
-  font-variation-settings: "FILL" 1, "wght" 500, "GRAD" 0, "opsz" 24; }
+.sidebar nav a.active .material-symbols-outlined { font-variation-settings: "FILL" 1; }
 
-/* "Manage" — a nav item that opens instead of navigating. Its summary borrows
-   the nav-link look; the links inside sit one step in. */
-.nav-sub > summary { list-style: none; cursor: pointer; display: flex; align-items: center;
-                     gap: 16px; border-radius: 999px; padding: 9px 16px; white-space: nowrap;
-                     font: 500 14px Figtree, sans-serif; color: var(--slate); }
-.nav-sub > summary::-webkit-details-marker { display: none; }
-.nav-sub > summary .material-symbols-outlined { flex-shrink: 0; font-size: 22px; color: var(--muted); }
-.nav-sub > summary:hover { background: var(--hover); color: var(--ink); }
-.nav-sub > summary:hover .material-symbols-outlined { color: var(--slate); }
-.nav-chev { margin-left: auto; flex-shrink: 0; color: var(--faint);
-            transition: transform .15s ease; }
-.nav-sub[open] .nav-chev { transform: rotate(180deg); }
-.sidebar .nav-sub > a { margin-top: 2px; padding-left: 28px; }
+/* Group heading. Sentence case at label size, lined up with the icons above it. */
+.nav-label { padding: 20px 14px 6px; font: 600 12px var(--font); color: var(--muted);
+             white-space: nowrap; }
 
-/* Collapsed: nav narrows to an icon rail; toggle stays as the first rail icon. */
-html.sb-collapsed .sidebar { width: 80px; }
-html.sb-collapsed .sb-toggle { justify-content: center; padding: 11px; gap: 0; }
-html.sb-collapsed .sb-toggle .material-symbols-outlined { transform: rotate(180deg); }
-html.sb-collapsed .sidebar nav a { justify-content: center; padding: 11px; gap: 0; }
+/* Collapsed: an icon rail. Labels go (the title attribute still names each link),
+   and the group heading shrinks to a rule so the rail still shows two groups. */
+html.sb-collapsed .sidebar { width: 72px; }
+html.sb-collapsed .sidebar nav a { justify-content: center; padding: 0; gap: 0; }
 html.sb-collapsed .sidebar nav a span:not(.material-symbols-outlined) { display: none; }
-/* Icon rail: Manage keeps its icon and still opens; the label and chevron go. */
-html.sb-collapsed .nav-sub > summary { justify-content: center; padding: 11px; gap: 0; }
-html.sb-collapsed .nav-sub > summary span:not(.material-symbols-outlined),
-html.sb-collapsed .nav-chev { display: none; }
+html.sb-collapsed .nav-label { height: 1px; padding: 0; margin: 10px 8px; overflow: hidden;
+                               background: var(--border); color: transparent; }
 html.sb-collapsed .acct { display: flex; justify-content: center; }
 html.sb-collapsed .acct-info, html.sb-collapsed .acct-chev { display: none; }
 html.sb-collapsed .acct-menu > summary { justify-content: center; padding: 8px; }
@@ -497,9 +504,9 @@ html.sb-collapsed .acct-pop { left: calc(100% - 4px); right: auto; bottom: 8px; 
 .acct-menu > summary::-webkit-details-marker { display: none; }
 .acct-menu > summary:hover { background: var(--hover); }
 .acct-info { flex: 1; min-width: 0; }
-.acct-info .n { font: 600 13px Figtree, sans-serif; line-height: 1.2;
+.acct-info .n { font: 600 13px var(--font); line-height: 1.2;
                 white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.acct-info .r { font: 400 11px Figtree, sans-serif; color: var(--muted); margin-top: 1px;
+.acct-info .r { font: 400 11px var(--font); color: var(--muted); margin-top: 1px;
                 white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .acct-chev { color: var(--faint); flex-shrink: 0; transition: transform .15s ease; }
 .acct-menu[open] .acct-chev { transform: rotate(180deg); }
@@ -511,7 +518,7 @@ html.sb-collapsed .acct-pop { left: calc(100% - 4px); right: auto; bottom: 8px; 
             box-shadow: var(--pop-shadow); padding: 6px; z-index: 20; }
 .acct-pop a, .acct-pop button { display: flex; align-items: center; gap: 10px; width: 100%;
             box-sizing: border-box; padding: 9px 12px; border-radius: 8px; text-align: left;
-            font: 500 13px Figtree, sans-serif; color: var(--slate);
+            font: 500 13px var(--font); color: var(--slate);
             background: none; border: none; cursor: pointer; }
 .acct-pop a:hover, .acct-pop button:hover { background: var(--hover); color: var(--ink); text-decoration: none; }
 .acct-pop a.active { background: var(--navy-tint); color: var(--navy); }
@@ -536,14 +543,11 @@ html.sb-collapsed .acct-pop { left: calc(100% - 4px); right: auto; bottom: 8px; 
   .sb-toggle { display: none; }
   .sidebar, html.sb-collapsed .sidebar { width: 100%; flex-direction: row; align-items: center; }
   .sidebar nav { flex-direction: row; padding: 0 8px; overflow-x: auto; }
-  html.sb-collapsed .sidebar nav a { justify-content: center; padding: 9px 16px; gap: 16px; }
+  html.sb-collapsed .sidebar nav a { justify-content: flex-start; padding: 0 14px; gap: 12px; }
   html.sb-collapsed .sidebar nav a span:not(.material-symbols-outlined) { display: inline; }
-  /* A drawer can't open downward inside a horizontal scroll row, so on mobile
-     Manage flattens: its summary goes and the three links join the row. */
-  .nav-sub, .nav-sub::details-content { display: contents; }
-  .nav-sub::details-content { content-visibility: visible; }
-  .nav-sub > summary { display: none; }
-  .sidebar .nav-sub > a { padding-left: 16px; margin-top: 0; }
+  /* One scrolling row: the Administration links join it and the heading goes. */
+  .nav-group { display: contents; }
+  .nav-label { display: none; }
   .sidebar .acct, html.sb-collapsed .acct { border-top: none; margin-left: auto; }
   .acct-info { display: none; }               /* avatar-only chip on mobile */
   .acct-chev { display: none; }
@@ -555,7 +559,7 @@ html.sb-collapsed .acct-pop { left: calc(100% - 4px); right: auto; bottom: 8px; 
   .figs-head { display: none; }
   .trow.figs { display: block; }
   .figs .fname { font-weight: 600; }
-  .figs .fl { display: block; font: 500 12px Figtree, sans-serif; color: var(--muted);
+  .figs .fl { display: block; font: 500 12px var(--font); color: var(--muted);
               margin: 12px 0 4px; }
   .figs input { text-align: left; }
 }

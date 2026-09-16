@@ -11,8 +11,9 @@
   var btn = document.querySelector(".sb-toggle");
   function sync() {
     var c = document.documentElement.classList.contains("sb-collapsed");
-    btn.setAttribute("aria-pressed", c ? "true" : "false");
+    btn.setAttribute("aria-expanded", c ? "false" : "true");
     btn.title = c ? "Expand sidebar" : "Collapse sidebar";
+    btn.setAttribute("aria-label", btn.title);
   }
   btn.addEventListener("click", function () {
     var c = document.documentElement.classList.toggle("sb-collapsed");

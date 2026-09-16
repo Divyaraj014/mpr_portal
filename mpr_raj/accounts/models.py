@@ -1,4 +1,5 @@
 import calendar
+import re
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
@@ -12,7 +13,7 @@ class District(models.Model):
     name = models.CharField(max_length=100, unique=True)
     # One DIO per district; a DIO may hold several districts (reverse: user.districts).
     officer = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT,
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
         related_name="districts",
     )
 
@@ -70,8 +71,17 @@ class Project(models.Model):
     STATE = "state"
     CATEGORY_CHOICES = [(CENTRAL, "Central"), (STATE, "State")]
 
+    # The portal's own handle for a project: P001, P002, … Assigned on first save
+    # and never shown as an editable field, unlike prism_id, which is issued by
+    # PRISM and typed in by the admin.
+    code = models.CharField("Project ID", max_length=10, unique=True, blank=True)
     name = models.CharField(max_length=150)
-    prism_id = models.CharField("PRISM ID", max_length=50, unique=True)
+    # NULL rather than "" when unknown — plenty of projects have no PRISM ID yet,
+    # and Postgres counts NULLs as distinct, so they don't fight over the unique
+    # index the way empty strings would. The usual "no null on a CharField" rule
+    # doesn't survive contact with a unique column that is often blank.
+    prism_id = models.CharField("PRISM ID", max_length=50, unique=True,
+                                null=True, blank=True)
     category = models.CharField(max_length=10, choices=CATEGORY_CHOICES, default=STATE)
     department = models.ForeignKey(
         Department, null=True, blank=True, on_delete=models.SET_NULL, related_name="projects",
@@ -89,7 +99,31 @@ class Project(models.Model):
         ordering = ["name"]
 
     def __str__(self):
-        return f"{self.name} ({self.prism_id})"
+        return f"{self.name} ({self.prism_id})" if self.prism_id else self.name
+
+    @classmethod
+    def next_code(cls):
+        """
+        One past the highest P-number in use. Reads the numbers rather than
+        counting rows, so deleting P003 doesn't hand its code to the next project.
+
+        Numbering is gapless, so deleting the newest project frees its number for
+        the next one. Deleting one from the middle leaves a hole that stays a hole.
+
+        ponytail: scans the code column, which is fine for a few hundred projects.
+        Two admins saving at the same instant would compute the same code — the
+        unique constraint turns that into a loud error, not a duplicate. Switch to
+        a Postgres sequence if either the reuse or the race ever matters; that
+        trades gapless numbering for codes that are never handed out twice.
+        """
+        used = [int(m.group(1)) for code in cls.objects.values_list("code", flat=True)
+                if (m := re.fullmatch(r"P(\d+)", code or ""))]
+        return f"P{max(used, default=0) + 1:03d}"
+
+    def save(self, *args, **kwargs):
+        if not self.code:
+            self.code = self.next_code()
+        super().save(*args, **kwargs)
 
 
 class User(AbstractUser):
@@ -130,20 +164,35 @@ class User(AbstractUser):
             self.username = self.email.split("@")[0]
         super().save(*args, **kwargs)
 
+    # (flag, full name, abbreviation), in the order roles are listed everywhere.
+    # Admin is Django's is_staff; the rest are the fields above. Templates read
+    # roles_display / roles_short instead of testing each flag, so adding a role
+    # is one line here.
+    ROLES = [
+        ("is_staff", "Admin", "Admin"),
+        ("is_sio", "SIO / Additional SIO", "SIO"),
+        ("is_gl", "Group Leader", "GL"),
+        ("is_pl", "Project Leader", "PL"),
+        ("is_dio", "District Informatics Officer", "DIO"),
+    ]
+
     @property
     def roles_display(self):
-        roles = []
-        if self.is_staff:
-            roles.append("Admin")
-        if self.is_sio:
-            roles.append("SIO / Additional SIO")
-        if self.is_gl:
-            roles.append("Group Leader")
-        if self.is_pl:
-            roles.append("Project Leader")
-        if self.is_dio:
-            roles.append("District Informatics Officer")
-        return ", ".join(roles) or "No role assigned"
+        held = [full for flag, full, _ in self.ROLES if getattr(self, flag)]
+        return ", ".join(held) or "No role assigned"
+
+    @property
+    def can_monitor(self):
+        """
+        Who sees the compilation screens: admins, the SIO office and Group Leaders.
+        Read-only — approving an unlock stays admin_required.
+        """
+        return self.is_staff or self.is_sio or self.is_gl
+
+    @property
+    def roles_short(self):
+        """Same list, abbreviated — for table cells the full names don't fit."""
+        return ", ".join(short for flag, _, short in self.ROLES if getattr(self, flag))
 
 
 class MPRPeriod(models.Model):
@@ -254,8 +303,11 @@ class MPREntry(models.Model):
     event_category = models.CharField(max_length=20, choices=EVENT_CATEGORIES, blank=True)
     award_level = models.CharField(max_length=20, choices=AWARD_LEVELS, blank=True)
     # Set from the report the row was filed in, not by the user. Null on district rows.
+    # PROTECT, like period and author: a filed entry names the project it reports on,
+    # and deleting the project would leave the row behind belonging to nothing, quietly
+    # changing every past report and export. A project with history isn't deletable.
     project = models.ForeignKey(
-        Project, null=True, blank=True, on_delete=models.SET_NULL, related_name="mpr_entries")
+        Project, null=True, blank=True, on_delete=models.PROTECT, related_name="mpr_entries")
     photo = models.ImageField(upload_to="mpr/awards/", blank=True)
 
     class Meta:

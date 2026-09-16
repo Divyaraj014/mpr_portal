@@ -42,7 +42,7 @@ exist, so they aren't a fixed layout app.css could name.
     <div>
       <div class="t-key">{{ r.user.name|default:r.user.username }}</div>
       <div class="t-fine">
-        {% if r.user.is_pl %}PL{% endif %}{% if r.user.is_pl and r.user.is_dio %} + {% endif %}{% if r.user.is_dio %}DIO{% endif %}
+        {{ r.user.roles_short }}
       </div>
     </div>
     <div class="st">

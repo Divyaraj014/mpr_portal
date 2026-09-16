@@ -676,7 +676,7 @@ Interaction uses platform elements before JavaScript:
 
 | Need | Mechanism |
 |---|---|
-| Section accordions, account menu, sidebar "Manage" group | `<details>/<summary>` |
+| Section accordions, account menu | `<details>/<summary>` |
 | Date entry | `<input type="date">` — native picker, no library |
 | Destructive confirm | Server-rendered confirm page (locks, deletes) |
 

@@ -5,15 +5,21 @@
   <h1 class="pg">Projects</h1>
   <a href="{% url 'project_add' %}" class="btn">Add project</a>
 </div>
+{% include "accounts/_filters.html" %}
+
 {# Column widths live in app.css, under .tbl-projects. #}
 <div class="table tbl-projects">
   <div class="thead">
-    <div>Name</div><div>PRISM ID</div><div>Category</div><div>Assigned employee</div><div></div>
+    {% for c in columns %}
+    <a href="{{ c.url }}" class="th-sort">{{ c.label }}<span class="arrow">{{ c.arrow }}</span></a>
+    {% endfor %}
+    <div></div>
   </div>
   {% for p in projects %}
   <div class="trow">
+    <div class="t-id">{{ p.code }}</div>
     <div class="t-key">{{ p.name }}</div>
-    <div class="t-id">{{ p.prism_id }}</div>
+    <div class="t-id">{{ p.prism_id|default:"—" }}</div>
     <div><span class="status st-gray">{{ p.get_category_display }}</span></div>
     <div class="t-val">
       {% if p.leader %}{{ p.leader.name|default:p.leader.username }}{% else %}—{% endif %}
@@ -22,8 +28,13 @@
   </div>
   {% empty %}
   <div class="trow empty">
+    {% if filtered %}
+    <div class="t-block">No projects match these filters</div>
+    <div class="t-note"><a href="{% url 'project_list' %}">Clear the filters</a> to see all {{ total }}.</div>
+    {% else %}
     <div class="t-block">No projects yet</div>
     <div class="t-note"><a href="{% url 'project_add' %}">Add the first project</a> to get started.</div>
+    {% endif %}
   </div>
   {% endfor %}
 </div>

@@ -12,8 +12,8 @@ from ..admin import LookupAdmin, MPREntryAdmin
 from ..captcha import SESSION_KEY
 from ..forms import entry_form_class
 from ..models import (
-    Designation, District, MPREntry, MPRLock, MPRPeriod, ParameterValue, PlaceOfPosting,
-    Project, ProjectParameter,
+    Department, Designation, District, MPREntry, MPRLock, MPRPeriod, ParameterValue,
+    PlaceOfPosting, Project, ProjectParameter,
 )
 
 User = get_user_model()
@@ -28,16 +28,84 @@ class AdminUserManagementTests(TestCase):
         self.client.force_login(User.objects.create_user("pleb", password="x", must_change_password=False))
         self.assertNotEqual(self.client.get(reverse("user_list")).status_code, 200)
 
+    def _roster(self):
+        """Three employees who differ in every way the list can filter or sort on."""
+        jaipur = PlaceOfPosting.objects.create(name="Jaipur")
+        kota = PlaceOfPosting.objects.create(name="Kota")
+        scientist = Designation.objects.create(name="Scientist-D")
+        User.objects.create_user("zara.pl", password="x", name="Zara", is_pl=True,
+                                 place_of_posting=jaipur, designation=scientist)
+        User.objects.create_user("amit.dio", password="x", name="Amit", is_dio=True,
+                                 place_of_posting=kota, is_active=False)
+        User.objects.create_user("neha.gl", password="x", name="Neha", is_gl=True,
+                                 place_of_posting=jaipur, is_activated=True)
+        return jaipur, kota
+
+    def test_user_list_shows_place_of_posting(self):
+        self.client.force_login(self.admin)
+        self._roster()
+        self.assertContains(self.client.get(reverse("user_list")), "Place of posting")
+
+    def test_user_list_filters(self):
+        self.client.force_login(self.admin)
+        jaipur, _ = self._roster()
+        url = reverse("user_list")
+
+        by_role = self.client.get(url, {"role": "is_gl"}).context["users"]
+        self.assertEqual([u.username for u in by_role], ["neha.gl"])
+
+        by_place = self.client.get(url, {"place": jaipur.pk}).context["users"]
+        self.assertEqual({u.username for u in by_place}, {"zara.pl", "neha.gl"})
+
+        by_status = self.client.get(url, {"status": "disabled"}).context["users"]
+        self.assertEqual([u.username for u in by_status], ["amit.dio"])
+
+        # Filters stack, and an empty result says so rather than looking broken.
+        none = self.client.get(url, {"role": "is_gl", "status": "disabled"})
+        self.assertEqual(list(none.context["users"]), [])
+        self.assertContains(none, "No users match these filters")
+
+    def test_user_list_sorts_both_ways(self):
+        self.client.force_login(self.admin)
+        self._roster()
+        url = reverse("user_list")
+
+        names = [u.name for u in self.client.get(url, {"sort": "name"}).context["users"]]
+        self.assertEqual(names, ["", "Amit", "Neha", "Zara"])  # the admin has no name
+        self.assertEqual(
+            [u.name for u in self.client.get(url, {"sort": "-name"}).context["users"]],
+            names[::-1])
+
+        # An unknown sort key falls back to login ID instead of 500-ing.
+        self.assertEqual(
+            [u.username for u in self.client.get(url, {"sort": "drop table"}).context["users"]],
+            ["amit.dio", "boss", "neha.gl", "zara.pl"])
+
+    def test_sort_links_keep_the_active_filters(self):
+        self.client.force_login(self.admin)
+        jaipur, _ = self._roster()
+        columns = self.client.get(reverse("user_list"),
+                                  {"place": jaipur.pk, "sort": "name"}).context["columns"]
+        by_label = {c["label"]: c for c in columns}
+        self.assertIn(f"place={jaipur.pk}", by_label["Name"]["url"])
+        # The sorted column offers the reverse; the others start ascending.
+        self.assertIn("sort=-name", by_label["Name"]["url"])
+        self.assertEqual(by_label["Name"]["arrow"], "▲")
+        self.assertIn("sort=roles", by_label["Roles"]["url"])
+
     def test_admin_creates_user_with_temp_password(self):
         self.client.force_login(self.admin)
         resp = self.client.post(
             reverse("user_add"),
-            {"email": "new.dio@nic.in", "name": "New DIO", "temp_password": "Temp@999", "is_dio": "on", "is_active": "on"},
+            {"email": "new.dio@nic.in", "name": "New DIO", "temp_password": "Temp@999",
+             "is_dio": "on", "is_gl": "on", "is_active": "on"},
         )
         self.assertRedirects(resp, reverse("user_list"))
         u = User.objects.get(username="new.dio")
         self.assertTrue(u.is_dio and u.must_change_password and not u.is_activated)
+        self.assertTrue(u.is_gl)
         self.assertTrue(u.check_password("Temp@999"))
+        self.assertContains(self.client.get(reverse("user_list")), "GL, DIO")
 
     def test_admin_deletes_user_after_confirming(self):
         self.client.force_login(self.admin)
@@ -134,6 +202,23 @@ class MasterDataTests(TestCase):
         self.assertFalse(Project.objects.filter(pk=proj.pk).exists())
         self.assertTrue(User.objects.filter(pk=emp.pk).exists())  # user survives
 
+    def test_reported_data_blocks_deleting_the_project(self):
+        proj = Project.objects.create(name="Vahan", prism_id="PR-1042")
+        period = MPRPeriod.objects.create(year=2026, month=7, due_date="2026-08-05")
+        entry = MPREntry.objects.create(period=period, author=self.admin, project=proj,
+                                        kind=MPREntry.SIGNIFICANT, description="rollout")
+
+        # GET says why before the admin clicks.
+        resp = self.client.get(reverse("project_delete", args=[proj.pk]))
+        self.assertContains(resp, "1 monthly report entry")
+
+        # POST is refused, and the entry keeps pointing at the project.
+        resp = self.client.post(reverse("project_delete", args=[proj.pk]))
+        self.assertContains(resp, escape("Can’t delete"))
+        self.assertTrue(Project.objects.filter(pk=proj.pk).exists())
+        entry.refresh_from_db()
+        self.assertEqual(entry.project_id, proj.pk)
+
     def test_non_staff_cannot_delete(self):
         proj = Project.objects.create(name="Vahan", prism_id="PR-1042")
         self.client.logout()
@@ -141,6 +226,92 @@ class MasterDataTests(TestCase):
         resp = self.client.post(reverse("project_delete", args=[proj.pk]))
         self.assertIn(reverse("login"), resp.url)  # bounced to login, not deleted
         self.assertTrue(Project.objects.filter(pk=proj.pk).exists())
+
+    def test_project_list_filters_and_sorts(self):
+        self.client.force_login(self.admin)
+        finance = Department.objects.create(name="Finance")
+        pl = User.objects.create_user("some.pl", password="x", name="Zara", is_pl=True)
+        Project.objects.create(name="Vahan", prism_id="PR-1", category="central")
+        Project.objects.create(name="Sarathi", department=finance, leader=pl)
+        Project.objects.create(name="eMitra", category="central")
+        url = reverse("project_list")
+
+        by_category = self.client.get(url, {"category": "central"}).context["projects"]
+        self.assertEqual({p.name for p in by_category}, {"Vahan", "eMitra"})
+
+        by_dept = self.client.get(url, {"department": finance.pk}).context["projects"]
+        self.assertEqual([p.name for p in by_dept], ["Sarathi"])
+
+        # The filter that matters: projects nobody files an MPR for.
+        orphans = self.client.get(url, {"leader": "unassigned"}).context["projects"]
+        self.assertEqual({p.name for p in orphans}, {"Vahan", "eMitra"})
+
+        # Default order is by Project ID; the Name heading re-sorts and reverses.
+        self.assertEqual([p.code for p in self.client.get(url).context["projects"]],
+                         ["P001", "P002", "P003"])
+        self.assertEqual([p.name for p in self.client.get(url, {"sort": "-name"}).context["projects"]],
+                         ["eMitra", "Vahan", "Sarathi"])
+
+        none = self.client.get(url, {"category": "state", "leader": "unassigned"})
+        self.assertEqual(list(none.context["projects"]), [])
+        self.assertContains(none, "No projects match these filters")
+
+    def test_name_sort_ignores_case(self):
+        self.client.force_login(self.admin)
+        for name in ("ShalaDarpan", "e-Procurement", "AshaSoft"):
+            Project.objects.create(name=name)
+        # Byte-order collation would file both lowercase-leading names last.
+        self.assertEqual(
+            [p.name for p in self.client.get(reverse("project_list"),
+                                             {"sort": "name"}).context["projects"]],
+            ["AshaSoft", "e-Procurement", "ShalaDarpan"])
+
+    def test_projects_are_numbered_on_creation(self):
+        first = Project.objects.create(name="Vahan", prism_id="PR-1")
+        second = Project.objects.create(name="Sarathi", prism_id="PR-2")
+        self.assertEqual([first.code, second.code], ["P001", "P002"])
+
+        # A code, once assigned, survives later edits.
+        first.name = "Vahan 4.0"
+        first.save()
+        self.assertEqual(Project.objects.get(pk=first.pk).code, "P001")
+
+    def test_deleting_the_last_project_frees_its_code(self):
+        Project.objects.create(name="Vahan", prism_id="PR-1")
+        Project.objects.create(name="Sarathi", prism_id="PR-2").delete()
+        # Numbering stays gapless, which means the highest code is reusable once
+        # its project is gone. See Project.next_code — deliberate, not accidental.
+        self.assertEqual(Project.objects.create(name="eMitra", prism_id="PR-3").code, "P002")
+
+    def test_deleting_a_middle_project_leaves_its_gap(self):
+        Project.objects.create(name="Vahan", prism_id="PR-1")
+        middle = Project.objects.create(name="Sarathi", prism_id="PR-2")
+        Project.objects.create(name="eMitra", prism_id="PR-3")
+        middle.delete()
+        # P002 is gone but P003 is still taken, so the next project gets P004.
+        self.assertEqual(Project.objects.create(name="Raj Kaj", prism_id="PR-4").code, "P004")
+
+    def test_projects_without_a_prism_id_coexist(self):
+        # Most projects have no PRISM ID. They must not fight over the unique index,
+        # which is why the column is NULL-when-absent rather than "".
+        self.client.force_login(self.admin)
+        for name in ("Vahan", "Sarathi", "eMitra"):
+            resp = self.client.post(reverse("project_add"),
+                                    {"name": name, "prism_id": "", "category": "state"})
+            self.assertRedirects(resp, reverse("project_list"))
+        self.assertEqual(Project.objects.filter(prism_id__isnull=True).count(), 3)
+        self.assertEqual([p.code for p in Project.objects.order_by("code")],
+                         ["P001", "P002", "P003"])
+        # A real PRISM ID is still unique.
+        Project.objects.create(name="Raj Kaj", prism_id="1951")
+        self.assertContains(
+            self.client.post(reverse("project_add"),
+                             {"name": "Clash", "prism_id": "1951", "category": "state"}),
+            "already exists")
+
+    def test_hundredth_project_keeps_the_width(self):
+        Project.objects.create(name="Ninety-nine", prism_id="PR-99", code="P099")
+        self.assertEqual(Project.objects.create(name="Hundred", prism_id="PR-100").code, "P100")
 
     def test_admin_creates_project_with_prism_id(self):
         resp = self.client.post(
