@@ -1,0 +1,53 @@
+# systemd unit for the MPR portal.
+#
+#   sudo cp deploy/mpr-portal.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now mpr-portal
+#
+# Every path below assumes the project lives at /srv/mpr_portal. Change them all
+# together if it lives somewhere else — a mismatch here fails with a bare 502
+# from nginx and nothing useful in its log; `journalctl -u mpr-portal` has the
+# real error.
+
+[Unit]
+Description=MPR Portal (gunicorn)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+# A dedicated unprivileged account: `sudo useradd --system --home /srv/mpr_portal mpr`
+# Group nginx so the worker can hand off media/ that nginx then serves.
+User=mpr
+Group=nginx
+
+WorkingDirectory=/srv/mpr_portal/mpr_raj
+
+# gunicorn reads no .env itself — settings.py loads it from BASE_DIR, which is
+# WorkingDirectory above.
+ExecStart=/srv/mpr_portal/.venv/bin/gunicorn \
+    --workers 3 \
+    --bind 127.0.0.1:8001 \
+    --access-logfile - \
+    --error-logfile - \
+    mpr_raj.wsgi:application
+
+# Workers: (2 x cores) + 1 is the usual starting point — `nproc` to count them.
+# These are sync workers, so each one is busy for the whole of a request; the PDF
+# export is the slow path here and will hold a worker for its duration.
+
+Restart=on-failure
+RestartSec=5
+
+# Logs go to the journal: journalctl -u mpr-portal -f
+StandardOutput=journal
+StandardError=journal
+
+# Basic containment. The portal writes only to media/ and logs/.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/srv/mpr_portal/mpr_raj/media /srv/mpr_portal/mpr_raj/logs
+
+[Install]
+WantedBy=multi-user.target

@@ -145,20 +145,105 @@ serve `staticfiles/` with a real web server rather than `runserver`.
 
 ## Deployment
 
-Set `DEBUG=False`, a real `SECRET_KEY`, and a real `ALLOWED_HOSTS` /
-`CSRF_TRUSTED_ORIGINS` in `.env`, then:
+gunicorn behind nginx, on Fedora. Config files live in `deploy/` and assume the
+project is at `/srv/mpr_portal` — change the paths in both files together if it
+is somewhere else.
+
+### 1. Put the project somewhere nginx can reach
 
 ```bash
-cd mpr_raj
-uv run python manage.py check --deploy    # must be clean
-uv run python manage.py collectstatic
-uv run python manage.py migrate
+sudo useradd --system --home /srv/mpr_portal mpr
+sudo git clone https://github.com/Divyaraj014/mpr_portal.git /srv/mpr_portal
+cd /srv/mpr_portal && sudo -u mpr uv sync
 ```
 
-Serve `staticfiles/` and `media/` from nginx — and make sure nginx never
-executes anything out of `media/`, since award photos are user uploads. Logs
-rotate into `mpr_raj/logs/mpr.log`. TLS terminates at the proxy, which must set
-`X-Forwarded-Proto`.
+A clone under `/home` will not work: nginx runs as its own user and cannot
+traverse another user's home directory. That failure looks like a 403 on every
+static file while the pages themselves load.
+
+### 2. Configure
+
+`mpr_raj/.env`:
+
+```
+DEBUG=False
+HTTPS=False
+SECRET_KEY=<generate a fresh one>
+DATABASE_URL=postgres://...
+ALLOWED_HOSTS=mpr.local,192.168.1.42
+AXES_IPWARE_PROXY_COUNT=1
+```
+
+`AXES_IPWARE_PROXY_COUNT=1` is safe **only** because `deploy/nginx-mpr-portal.conf`
+overwrites `X-Forwarded-For`. The two go together — see below.
+
+```bash
+cd /srv/mpr_portal/mpr_raj
+sudo -u mpr uv run python manage.py migrate
+sudo -u mpr uv run python manage.py collectstatic --noinput
+sudo -u mpr uv run python manage.py check --deploy
+```
+
+`check --deploy` will report the cookie and SSL warnings, because `HTTPS=False`.
+That is expected while there is no TLS, and those warnings are the reason to
+add it.
+
+### 3. Install the services
+
+```bash
+sudo cp deploy/mpr-portal.service /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now mpr-portal
+
+sudo dnf install nginx
+sudo cp deploy/nginx-mpr-portal.conf /etc/nginx/conf.d/mpr-portal.conf
+sudo nginx -t && sudo systemctl enable --now nginx
+```
+
+### 4. SELinux and the firewall
+
+Fedora enforces SELinux, and both of these fail **silently from nginx's point of
+view** — you get a 502 or a 403 with nothing obviously wrong in the config.
+
+```bash
+# Let nginx open a connection to gunicorn. Without this: 502 on every page.
+sudo setsebool -P httpd_can_network_connect 1
+
+# Let nginx read the static and media trees outside /var/www. Without this: 403
+# on every stylesheet while the HTML itself loads, so the site appears unstyled.
+sudo semanage fcontext -a -t httpd_sys_content_t "/srv/mpr_portal/mpr_raj/(staticfiles|media)(/.*)?"
+sudo restorecon -Rv /srv/mpr_portal/mpr_raj
+
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --reload
+```
+
+`semanage` comes from `policycoreutils-python-utils` if it is missing.
+
+When something breaks, `sudo ausearch -m avc -ts recent` shows what SELinux
+denied — far faster than guessing.
+
+### 5. Check it
+
+```bash
+systemctl status mpr-portal nginx
+journalctl -u mpr-portal -f     # gunicorn's real errors; nginx only shows 502
+curl -I http://192.168.1.42/
+```
+
+Django's own log rotates into `mpr_raj/logs/mpr.log`; gunicorn's goes to the
+journal.
+
+### Updating
+
+```bash
+cd /srv/mpr_portal && sudo -u mpr git pull && sudo -u mpr uv sync
+cd mpr_raj
+sudo -u mpr uv run python manage.py migrate
+sudo -u mpr uv run python manage.py collectstatic --noinput
+sudo systemctl restart mpr-portal
+```
+
+nginx only needs reloading if its own config changed.
 
 ### Client addresses in the security log
 
@@ -169,11 +254,21 @@ same and the IP column is worthless.
 To record real client addresses, both of these must be true:
 
 1. nginx **overwrites** the header rather than appending to whatever the client
-   sent — `proxy_set_header X-Forwarded-For $remote_addr;`
+   sent — `proxy_set_header X-Forwarded-For $remote_addr;`. The config in
+   `deploy/` does this.
 2. `AXES_IPWARE_PROXY_COUNT` in `.env` is set to the number of proxies actually
-   in front of Django (`1` for a single nginx).
+   in front of Django — `1` for the single nginx above.
 
 Do one without the other and the logged IP becomes forgeable: a client can send
 its own `X-Forwarded-For` and choose what the security log says about it. An
 address you cannot trust is worse than none, because it is evidence people
-believe. Leave the count at `0` until the nginx side is confirmed.
+believe.
+
+The trap is `$proxy_add_x_forwarded_for`, which appears in most nginx examples
+you will find. It *appends* to the client-supplied header rather than replacing
+it, so with a proxy count of 1 the address Django reads is the one the client
+sent. Use `$remote_addr`.
+
+If you add a second proxy — a load balancer in front of nginx — the count has to
+change with it. Leave it at `0` any time you are unsure; a blank column is
+better than a confident wrong one.
