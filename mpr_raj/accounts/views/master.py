@@ -10,9 +10,23 @@ from django.shortcuts import get_object_or_404, redirect, render, resolve_url
 from django.urls import reverse
 
 from ..forms import DistrictForm, PeriodForm, ProjectForm, ProjectParameterForm, UserForm
-from ..models import Department, District, MPRPeriod, PlaceOfPosting, Project, ProjectParameter, User
+from ..models import (Department, District, MPRPeriod, PlaceOfPosting, Project, ProjectParameter,
+                      SecurityEvent, User)
+from ..security import record
 
 admin_required = user_passes_test(lambda u: u.is_staff)
+
+# Role flags, for the security log's before/after on a user edit.
+ROLE_FIELDS = ["is_staff", "is_sio", "is_gl", "is_pl", "is_dio"]
+
+
+def _role_detail(form):
+    """"is_staff: No → Yes" for each role the save changed. Django computes the diff."""
+    def word(value):
+        return "Yes" if value else "No"
+
+    return ", ".join(f"{f}: {word(form.initial.get(f))} → {word(form.cleaned_data.get(f))}"
+                     for f in ROLE_FIELDS if f in form.changed_data)
 
 # Which column each sort key orders by, plus the tie-breaker that keeps equal rows
 # in a stable order. Roles has no single column, so it groups by seniority — the
@@ -158,7 +172,19 @@ def user_form(request, pk=None):
     user = get_object_or_404(User, pk=pk) if pk else None
     form = UserForm(request.POST or None, instance=user)
     if request.method == "POST" and form.is_valid():
-        form.save()
+        creating = user is None
+        roles = _role_detail(form)          # read before save(), while initial still holds
+        activity = "is_active" in form.changed_data
+        saved = form.save()
+        if creating:
+            record(SecurityEvent.USER_CREATED, actor=request.user, target=saved, request=request)
+        else:
+            if roles:
+                record(SecurityEvent.ROLE_CHANGED, actor=request.user, target=saved,
+                       request=request, detail=roles)
+            if activity:
+                record(SecurityEvent.USER_ENABLED if saved.is_active else SecurityEvent.USER_DISABLED,
+                       actor=request.user, target=saved, request=request)
         return redirect("user_list")
     ctx = {"form": form, "edit_user": user}
     if user and user != request.user:  # no self-deletion, so no link either
@@ -186,7 +212,10 @@ def user_delete(request, pk):
     projects = [p.name for p in user.projects.all()]
     if projects:
         warnings.append("Left unassigned: " + ", ".join(projects) + ".")
-    return _confirm_delete(request, user, "user_list", f"user “{user.name or user.username}”", warnings)
+    gone = user.username        # captured now; the row is unreadable afterwards
+    return _confirm_delete(request, user, "user_list", f"user “{user.name or user.username}”", warnings,
+                           on_deleted=lambda: record(SecurityEvent.USER_DELETED, actor=request.user,
+                                                     target_label=gone, request=request))
 
 
 @admin_required
@@ -213,12 +242,18 @@ def district_form(request, pk=None):
     return render(request, "accounts/master_form.html", ctx)
 
 
-def _confirm_delete(request, obj, back, label, warnings=()):
-    """`back` is anything redirect() takes — a URL name, or a path when it needs args."""
+def _confirm_delete(request, obj, back, label, warnings=(), on_deleted=None):
+    """
+    `back` is anything redirect() takes — a URL name, or a path when it needs args.
+    `on_deleted` fires only after the delete actually succeeds; shared by every
+    master delete, so only the caller knows whether the row is worth logging.
+    """
     blocked = None
     if request.method == "POST":
         try:
             obj.delete()
+            if on_deleted:
+                on_deleted()
             return redirect(back)
         except ProtectedError as exc:
             # A PROTECT row still points here (a district's officer, an author's

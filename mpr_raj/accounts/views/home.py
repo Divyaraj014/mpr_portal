@@ -8,7 +8,8 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 
 from ..forms import CaptchaAuthenticationForm
-from ..models import MPRPeriod, User
+from ..models import MPRPeriod, SecurityEvent, User
+from ..security import record
 from .monthly import _lock, _my_reports
 
 
@@ -37,6 +38,7 @@ class ForcedPasswordChangeView(PasswordChangeView):
             user.must_change_password = False
             user.is_activated = True
             user.save(update_fields=["must_change_password", "is_activated"])
+        record(SecurityEvent.PASSWORD_CHANGED, actor=user, request=self.request)
         return response
 
 

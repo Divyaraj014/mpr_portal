@@ -138,3 +138,46 @@ class AuthSignalTests(TestCase):
         self.sign_in()
         self.client.post(reverse("logout"))
         self.assertTrue(SecurityEvent.objects.filter(action=SecurityEvent.LOGOUT).exists())
+
+
+class ViewCaptureTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user("admin.one", password="Adm!n@12345",
+                                              is_staff=True, must_change_password=False)
+        self.client.force_login(self.admin)
+
+    def test_a_role_change_records_who_changed_what(self):
+        from ..models import SecurityEvent
+
+        staff = User.objects.create_user("emp.one", password="x", name="Asha",
+                                         email="emp.one@nic.in")
+        self.client.post(reverse("user_edit", args=[staff.pk]), {
+            "email": "emp.one@nic.in", "name": "Asha", "employee_code": "", "phone": "",
+            "ip_phone": "", "is_dio": "on", "is_active": "on",
+        })
+        event = SecurityEvent.objects.get(action=SecurityEvent.ROLE_CHANGED)
+        self.assertEqual(event.actor, self.admin)     # the admin acted
+        self.assertEqual(event.target, staff)         # on this person
+        self.assertIn("is_dio", event.detail)
+        self.assertIn("No → Yes", event.detail)
+
+    def test_deleting_a_user_records_it_before_the_row_goes(self):
+        from ..models import SecurityEvent
+
+        doomed = User.objects.create_user("emp.gone", password="x")
+        self.client.post(reverse("user_delete", args=[doomed.pk]))
+        self.assertFalse(User.objects.filter(pk=doomed.pk).exists())
+
+        event = SecurityEvent.objects.get(action=SecurityEvent.USER_DELETED)
+        self.assertEqual(event.target_label, "emp.gone")   # readable after the fact
+        self.assertEqual(event.actor, self.admin)
+
+    def test_a_password_change_is_recorded(self):
+        from ..models import SecurityEvent
+
+        self.client.post(reverse("password_change"), {
+            "old_password": "Adm!n@12345",
+            "new_password1": "My0wn-Str0ng-Pass", "new_password2": "My0wn-Str0ng-Pass",
+        })
+        self.assertTrue(
+            SecurityEvent.objects.filter(action=SecurityEvent.PASSWORD_CHANGED).exists())
