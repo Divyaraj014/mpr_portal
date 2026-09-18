@@ -100,3 +100,41 @@ class RecordTests(TestCase):
         with patch.object(SecurityEvent.objects, "create", side_effect=RuntimeError("db down")):
             record(SecurityEvent.LOGIN_OK, actor_label="dio.kota")   # must not raise
         self.assertEqual(SecurityEvent.objects.count(), 0)
+
+
+class AuthSignalTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("dio.kota", password="Right@12345",
+                                             must_change_password=False)
+
+    def solve_captcha(self):
+        self.client.get(reverse("captcha_image"))
+        return self.client.session[SESSION_KEY][-1]
+
+    def sign_in(self, username="dio.kota", password="Right@12345"):
+        return self.client.post(reverse("login"), {
+            "username": username, "password": password, "captcha": self.solve_captcha(),
+        })
+
+    def test_a_successful_sign_in_is_recorded(self):
+        from ..models import SecurityEvent
+
+        self.sign_in()
+        event = SecurityEvent.objects.get(action=SecurityEvent.LOGIN_OK)
+        self.assertEqual(event.actor, self.user)
+        self.assertEqual(event.actor_label, "dio.kota")
+
+    def test_a_failure_against_a_user_that_does_not_exist_is_recorded(self):
+        from ..models import SecurityEvent
+
+        self.sign_in(username="root", password="anything")
+        event = SecurityEvent.objects.get(action=SecurityEvent.LOGIN_FAIL)
+        self.assertIsNone(event.actor)                 # nothing to point at
+        self.assertEqual(event.actor_label, "root")    # but we know what was tried
+
+    def test_signing_out_is_recorded(self):
+        from ..models import SecurityEvent
+
+        self.sign_in()
+        self.client.post(reverse("logout"))
+        self.assertTrue(SecurityEvent.objects.filter(action=SecurityEvent.LOGOUT).exists())

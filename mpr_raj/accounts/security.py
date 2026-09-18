@@ -51,3 +51,30 @@ def record(action, *, actor=None, actor_label="", target=None, target_label="",
         )
     except Exception:
         logger.exception("security event not recorded: %s", action)
+
+
+def connect():
+    """Wire the receivers. Called once from AccountsConfig.ready()."""
+    from axes.signals import user_locked_out
+    from django.contrib.auth.signals import user_logged_in, user_logged_out, user_login_failed
+    from django.dispatch import receiver
+
+    # dispatch_uid keeps a second ready() call from double-recording everything.
+
+    @receiver(user_logged_in, dispatch_uid="seclog_login_ok")
+    def _login_ok(sender, request, user, **kwargs):
+        record(SecurityEvent.LOGIN_OK, actor=user, request=request)
+
+    @receiver(user_logged_out, dispatch_uid="seclog_logout")
+    def _logout(sender, request, user, **kwargs):
+        record(SecurityEvent.LOGOUT, actor=user, request=request)
+
+    @receiver(user_login_failed, dispatch_uid="seclog_login_fail")
+    def _login_fail(sender, credentials, request=None, **kwargs):
+        # The username may match no user at all — that is the case worth seeing.
+        record(SecurityEvent.LOGIN_FAIL,
+               actor_label=str(credentials.get("username") or "(blank)"), request=request)
+
+    @receiver(user_locked_out, dispatch_uid="seclog_locked_out")
+    def _locked_out(sender, request=None, username=None, **kwargs):
+        record(SecurityEvent.LOCKED_OUT, actor_label=str(username or "(blank)"), request=request)
