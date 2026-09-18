@@ -1,7 +1,7 @@
 {% extends "accounts/app.html" %}
 {% block title %}Filing status{% endblock %}
 {% block content %}
-<a href="{% url 'reports' %}?period={{ period.pk }}" class="btn-ghost btn-back">← Back to reports</a>
+<a href="{% url 'reports' %}?period={{ period.pk }}" class="btn-ghost btn-back">Back to reports</a>
 <div class="page-head">
   <div>
     <h1 class="pg">Filing status</h1>
@@ -82,7 +82,7 @@ exist, so they aren't a fixed layout app.css could name.
 
 {% if requests %}
 <div class="card">
-  <div class="t-key">Unlock requests</div>
+  <div class="t-head">Unlock requests</div>
   {% for r in rows %}{% if r.lock.unlock_requested %}
   <div class="req-row">
     <div class="t-label">{{ r.user.name|default:r.user.username }}</div>

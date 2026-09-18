@@ -1,18 +1,13 @@
 from datetime import date
 from unittest.mock import patch
 
-from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
-from django.utils.html import escape
 
-from .. import exports
-from ..admin import MPREntryAdmin
 from ..captcha import SESSION_KEY
-from ..forms import entry_form_class
 from ..models import (
-    District, MPREntry, MPRLock, MPRPeriod, ParameterValue, Project, ProjectParameter,
+    MPREntry, MPRLock, MPRPeriod,
 )
 
 User = get_user_model()
@@ -58,7 +53,7 @@ class SignInFlowTests(TestCase):
         code = self.solve_captcha()
         self.login(code)
         self.client.post(reverse("logout"))
-        resp = self.login(code)  # replayed code must fail
+        self.login(code)  # replayed code must fail
         self.assertNotIn("_auth_user_id", self.client.session)
 
     def test_first_login_forces_password_change_and_activates(self):

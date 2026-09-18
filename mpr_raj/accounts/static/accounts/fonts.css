@@ -5,45 +5,79 @@
  *
  * Licences (the text ships next to the files, as both licences require):
  *   Inter                     SIL Open Font License 1.1   fonts/OFL-Inter.txt
+ *   Montserrat                SIL Open Font License 1.1   fonts/OFL-Montserrat.txt
  *   Material Symbols Outlined Apache License 2.0          fonts/LICENSE-MaterialSymbols.txt
  * Both are free for government and commercial use, self-hosting, and PDF embedding.
  * Don't add a font here without adding its licence file alongside it.
  *
  * Regenerate by re-fetching these two stylesheets and re-downloading what they point at:
  *   https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap
+ *   https://fonts.googleapis.com/css2?family=Montserrat:wght@500..700&display=swap
  *   https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0..1,0&icon_names=analytics,calendar_month,dark_mode,edit_document,folder,group,light_mode,lock,map,menu,space_dashboard
  *
- * Inter is variable in weight and optical size: one file per subset covers every weight,
- * and the browser tightens large headings on its own (font-optical-sizing: auto).
+ * Inter (body, tables, controls) is variable in weight and optical size: one file per
+ * subset covers every weight. Montserrat is for headings only (--font-head in app.css).
  * Only latin and latin-ext are kept (latin-ext carries the rupee sign). The icon font
  * is subsetted to the icons in use (add a name to icon_names, alphabetical, to use a new
  * one) and keeps only the FILL axis, for the filled active-nav icon. The full set is ~4 MB.
  */
 @font-face {
-  font-family: 'Inter';
+  font-family: "Inter";
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url('fonts/inter-latin-ext.woff2') format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  src: url("fonts/inter-latin-ext.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
+
 @font-face {
-  font-family: 'Inter';
+  font-family: "Inter";
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url('fonts/inter-latin.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url("fonts/inter-latin.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
 }
+
 @font-face {
-  font-family: 'Material Symbols Outlined';
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("fonts/montserrat-latin-ext.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("fonts/montserrat-latin.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Material Symbols Outlined";
   font-style: normal;
   font-weight: 400;
-  src: url('fonts/material-symbols-outlined.woff2') format('woff2');
+  src: url("fonts/material-symbols-outlined.woff2") format("woff2");
 }
 
 .material-symbols-outlined {
-  font-family: 'Material Symbols Outlined';
+  font-family: "Material Symbols Outlined";
   font-weight: normal;
   font-style: normal;
   font-size: 24px;
@@ -54,6 +88,6 @@
   white-space: nowrap;
   word-wrap: normal;
   direction: ltr;
-  -webkit-font-feature-settings: 'liga';
+  -webkit-font-feature-settings: "liga";
   -webkit-font-smoothing: antialiased;
 }

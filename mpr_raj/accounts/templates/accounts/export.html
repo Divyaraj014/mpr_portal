@@ -1,9 +1,10 @@
 <!doctype html>
 {% comment %}
 Print sheet for the PDF export. Standalone on purpose: WeasyPrint renders it offline on
-the NIC network, so no shared app CSS. The logo and the Inter font files arrive as file://
-URIs because there is no request to resolve /static/ against. Inter is embedded rather
-than named-and-hoped-for, so the PDF looks the same on any server (OFL permits embedding).
+the NIC network, so no shared app CSS. The logo and the font files arrive as file:// URIs
+because there is no request to resolve /static/ against. Inter (text) and Montserrat
+(headings) are embedded rather than named-and-hoped-for, so the PDF looks the same on any
+server (OFL permits embedding).
 The latin-ext file is its own family, not a unicode-range: WeasyPrint dropped the rupee sign
 that way.
 
@@ -19,6 +20,8 @@ stylesheet link has nothing to resolve against; and the @page footers interpolat
   <style>
     @font-face { font-family: Inter; font-weight: 100 900; src: url("{{ fonts }}/inter-latin.woff2"); }
     @font-face { font-family: "Inter Ext"; font-weight: 100 900; src: url("{{ fonts }}/inter-latin-ext.woff2"); }
+    @font-face { font-family: Montserrat; font-weight: 100 900; src: url("{{ fonts }}/montserrat-latin.woff2"); }
+    @font-face { font-family: "Montserrat Ext"; font-weight: 100 900; src: url("{{ fonts }}/montserrat-latin-ext.woff2"); }
     @page {
       size: A4 landscape; margin: 14mm 12mm 16mm;
       @bottom-left { content: "Monthly Project Report · {{ period }}";
@@ -32,13 +35,13 @@ stylesheet link has nothing to resolve against; and the @page footers interpolat
     .head { display: flex; align-items: center; gap: 5mm;
             border-bottom: 1.2pt solid #1B4B8A; padding-bottom: 3.5mm; margin-bottom: 7mm; }
     .head img { height: 13mm; }
-    .org { font: 700 11pt Inter, "Inter Ext", sans-serif; color: #1B4B8A; }
+    .org { font: 700 11pt Montserrat, "Montserrat Ext", sans-serif; color: #1B4B8A; }
     .org small { display: block; font: 400 8.5pt Inter, "Inter Ext", sans-serif; color: #5F6368; margin-top: .8mm; }
     .doc { margin-left: auto; text-align: right; }
-    .doc h1 { font: 600 16pt Inter, "Inter Ext", sans-serif; color: #1B4B8A; margin: 0; }
+    .doc h1 { font: 700 16pt Montserrat, "Montserrat Ext", sans-serif; color: #1B4B8A; margin: 0; }
     .doc .meta { font: 400 8.5pt Inter, "Inter Ext", sans-serif; color: #5F6368; margin-top: 1mm; }
 
-    h2 { font: 600 11.5pt Inter, "Inter Ext", sans-serif; color: #1B4B8A; margin: 7mm 0 2mm;
+    h2 { font: 600 11.5pt Montserrat, "Montserrat Ext", sans-serif; color: #1B4B8A; margin: 7mm 0 2mm;
          page-break-after: avoid; }
     h2 .n { font: 400 8.5pt Inter, "Inter Ext", sans-serif; color: #5F6368; }
 

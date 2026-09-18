@@ -62,3 +62,48 @@ document.addEventListener("submit", function (e) {
 document.querySelectorAll("[data-submit-on-change]").forEach(function (el) {
   el.addEventListener("change", function () { this.form.submit(); });
 });
+
+// Live word count under capped text boxes. Counts like the server (split on
+// whitespace); the static "Up to N words." help text is what shows without JS.
+document.querySelectorAll("textarea[data-max-words]").forEach(function (box) {
+  var max = +box.dataset.maxWords, out = box.nextElementSibling;
+  if (!out || !out.classList.contains("helptext")) return;
+  out.setAttribute("aria-live", "polite");
+  function sync() {
+    var n = box.value.trim() ? box.value.trim().split(/\s+/).length : 0;
+    out.textContent = n + " / " + max + " words · " +
+      (n > max ? (n - max) + " over the limit" : (max - n) + " remaining");
+    out.classList.toggle("over", n > max);
+  }
+  box.addEventListener("input", sync);
+  sync();
+});
+
+// Figures page: suggest "since inception" as last month's total + this month's
+// figure. Never filled in by itself — the PL presses Use this or types their own.
+// Only plain numbers ("1,204", "12.5") add up; "NA" or "₹ 2 Cr" get no suggestion.
+(function () {
+  function num(s) {
+    s = (s || "").replace(/[,\s]/g, "");
+    return /^-?\d+(\.\d+)?$/.test(s) ? parseFloat(s) : null;
+  }
+  function fmt(n) { return n.toLocaleString("en-IN", { maximumFractionDigits: 2 }); }
+  document.querySelectorAll("input[data-last-cumulative]").forEach(function (cum) {
+    var row = cum.closest(".trow"), last = num(cum.dataset.lastCumulative),
+        rep = row.querySelector("input[name$='-reporting_month']"), hint = row.querySelector(".calc");
+    if (last === null || !rep || !hint) return;
+    var text = hint.querySelector("span"), use = hint.querySelector("button");
+    function sync() {
+      var r = num(rep.value), c = num(cum.value);
+      hint.hidden = r === null;
+      if (r === null) return;
+      var total = fmt(last + r), same = c !== null && fmt(c) === total;
+      text.textContent = fmt(last) + " + " + fmt(r) + " = " + total + (same ? " ✓" : "");
+      use.hidden = same;
+    }
+    use.addEventListener("click", function () { cum.value = fmt(last + num(rep.value)); sync(); });
+    rep.addEventListener("input", sync);
+    cum.addEventListener("input", sync);
+    sync();
+  });
+})();

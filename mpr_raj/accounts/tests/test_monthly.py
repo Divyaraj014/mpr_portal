@@ -1,21 +1,15 @@
-from datetime import date
-from unittest.mock import patch
-
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 from django.utils.html import escape
 
-from .. import exports
 from ..admin import MPREntryAdmin
-from ..captcha import SESSION_KEY
 from ..forms import entry_form_class
-from ..models import (
-    District, MPREntry, MPRLock, MPRPeriod, ParameterValue, Project, ProjectParameter,
-)
+from ..models import District, MPREntry, MPRLock, MPRPeriod, ParameterValue, Project, ProjectParameter
 
 User = get_user_model()
+
 
 class MPREntryFormTests(TestCase):
     def test_each_section_gets_only_its_own_fields(self):
@@ -27,7 +21,7 @@ class MPREntryFormTests(TestCase):
         entry_admin = MPREntryAdmin(MPREntry, AdminSite())
         for kind, expected in MPREntry.FIELDS.items():
             fields = entry_admin.get_fields(None, MPREntry(kind=kind))
-            self.assertEqual(fields[len(entry_admin.BASE_FIELDS):], expected, kind)
+            self.assertEqual(fields[len(entry_admin.BASE_FIELDS) :], expected, kind)
             for other in set(sum(MPREntry.FIELDS.values(), [])) - set(expected):
                 self.assertNotIn(other, fields, f"{other} leaked into {kind}")
         self.assertEqual(entry_admin.get_readonly_fields(None, MPREntry()), ("kind",))
@@ -37,18 +31,26 @@ class MPREntryFormTests(TestCase):
         self.assertEqual(form_cls.base_fields["title"].label, "Topic")
         period = MPRPeriod.objects.create(year=2026, month=7, due_date="2026-08-05")
         author = User.objects.create_user("dio.one", password="x")
-        form = form_cls({"title": "GIS basics", "date": "2026-07-01", "to_date": "2026-07-03",
-                         "participants": 40, "target_user": "Patwaris", "remarks": ""})
+        form = form_cls(
+            {
+                "title": "GIS basics",
+                "date": "2026-07-01",
+                "to_date": "2026-07-03",
+                "participants": 40,
+                "target_user": "Patwaris",
+                "remarks": "",
+            }
+        )
         self.assertTrue(form.is_valid(), form.errors)
         entry = form.save(commit=False)
         entry.period, entry.author, entry.kind = period, author, MPREntry.TRAINING
         entry.save()
         self.assertEqual(period.entries.get().participants, 40)
 
+
 class MPRFillFlowTests(TestCase):
     def setUp(self):
-        self.pl = User.objects.create_user("pl.one", password="x", is_pl=True,
-                                           must_change_password=False)
+        self.pl = User.objects.create_user("pl.one", password="x", is_pl=True, must_change_password=False)
         self.period = MPRPeriod.objects.create(year=2026, month=7, due_date="2026-08-05")
         self.client.force_login(self.pl)
 
@@ -62,9 +64,13 @@ class MPRFillFlowTests(TestCase):
         # Every project row belongs to a project now, so an unassigned PL has no report.
         resp = self.client.get(reverse("mpr_month", args=[self.period.pk]))
         self.assertContains(resp, "Nothing to fill")
-        self.assertEqual(self.client.post(
-            reverse("mpr_entry_add", args=[self.period.pk, MPREntry.SIGNIFICANT]),
-            {"description": "Nowhere to put this"}).status_code, 404)
+        self.assertEqual(
+            self.client.post(
+                reverse("mpr_entry_add", args=[self.period.pk, MPREntry.SIGNIFICANT]),
+                {"description": "Nowhere to put this"},
+            ).status_code,
+            404,
+        )
         self.assertFalse(MPREntry.objects.exists())
 
     def test_each_project_is_its_own_report(self):
@@ -78,34 +84,45 @@ class MPRFillFlowTests(TestCase):
         self.assertNotContains(month, "Major events planned")  # sections live one click in
 
         add = reverse("mpr_entry_add", args=[self.period.pk, MPREntry.EVENT])
-        resp = self.client.post(f"{add}?scope=project&project={vahan.pk}",
-                                {"event_category": "launch", "date": "2026-07-09",
-                                 "description": "e-challan app launch"})
+        resp = self.client.post(
+            f"{add}?scope=project&project={vahan.pk}",
+            {"event_category": "launch", "date": "2026-07-09", "description": "e-challan app launch"},
+        )
         self.assertRedirects(resp, reverse("mpr_project_report", args=[self.period.pk, vahan.pk]))
         self.assertEqual(MPREntry.objects.get().project, vahan)
 
         # The row shows on its own project's page and nowhere else.
         self.assertContains(
             self.client.get(reverse("mpr_project_report", args=[self.period.pk, vahan.pk])),
-            "e-challan app launch")
+            "e-challan app launch",
+        )
         self.assertNotContains(
             self.client.get(reverse("mpr_project_report", args=[self.period.pk, emitra.pk])),
-            "e-challan app launch")
+            "e-challan app launch",
+        )
 
     def test_cannot_file_into_a_project_you_do_not_lead(self):
         mine = Project.objects.create(name="Vahan", prism_id="PR-01", leader=self.pl)
         other = Project.objects.create(
-            name="Theirs", prism_id="PR-02",
-            leader=User.objects.create_user("pl.other", password="x", is_pl=True))
+            name="Theirs",
+            prism_id="PR-02",
+            leader=User.objects.create_user("pl.other", password="x", is_pl=True),
+        )
         add = reverse("mpr_entry_add", args=[self.period.pk, MPREntry.SIGNIFICANT])
-        self.assertEqual(self.client.post(f"{add}?scope=project&project={other.pk}",
-                                          {"description": "Not mine"}).status_code, 404)
-        self.assertEqual(self.client.get(
-            reverse("mpr_project_report", args=[self.period.pk, other.pk])).status_code, 404)
+        self.assertEqual(
+            self.client.post(
+                f"{add}?scope=project&project={other.pk}", {"description": "Not mine"}
+            ).status_code,
+            404,
+        )
+        self.assertEqual(
+            self.client.get(reverse("mpr_project_report", args=[self.period.pk, other.pk])).status_code, 404
+        )
         self.assertFalse(MPREntry.objects.exists())
         # Their own project is reachable.
-        self.assertEqual(self.client.get(
-            reverse("mpr_project_report", args=[self.period.pk, mine.pk])).status_code, 200)
+        self.assertEqual(
+            self.client.get(reverse("mpr_project_report", args=[self.period.pk, mine.pk])).status_code, 200
+        )
 
     def test_both_roles_get_separate_district_and_project_reports(self):
         District.objects.create(name="Udaipur", officer=self.pl)
@@ -122,12 +139,20 @@ class MPRFillFlowTests(TestCase):
         self.assertContains(month, "Udaipur")
         self.assertNotContains(month, "Major events planned")
 
-        # A row filed under one report stays under that one, and returns there.
+        # A row filed under one report stays under that one, and returns there —
+        # by Save, and by Back/Cancel too.
         add = reverse("mpr_entry_add", args=[self.period.pk, MPREntry.SIGNIFICANT])
+        form = self.client.get(f"{add}?scope=district")
+        self.assertEqual(form.context["back"], district_url)
+        self.assertContains(form, "Back to District report")
+        self.assertNotContains(form, f'href="{reverse("mpr_month", args=[self.period.pk])}"')
+        form = self.client.get(f"{add}?scope=project&project={project.pk}")
+        self.assertEqual(form.context["back"], project_url)
+        params = self.client.get(reverse("mpr_parameters", args=[self.period.pk, project.pk]))
+        self.assertEqual(params.context["back"], project_url)
         resp = self.client.post(f"{add}?scope=district", {"description": "District rollout"})
         self.assertRedirects(resp, district_url)
-        self.client.post(f"{add}?scope=project&project={project.pk}",
-                         {"description": "Project rollout"})
+        self.client.post(f"{add}?scope=project&project={project.pk}", {"description": "Project rollout"})
 
         district, proj = self.client.get(district_url), self.client.get(project_url)
         self.assertContains(district, "District rollout")
@@ -142,8 +167,8 @@ class MPRFillFlowTests(TestCase):
     def test_a_report_you_do_not_owe_is_not_reachable(self):
         # self.pl holds no district, so the district report page is not theirs.
         self.assertEqual(
-            self.client.get(reverse("mpr_district_report", args=[self.period.pk])).status_code,
-            404)
+            self.client.get(reverse("mpr_district_report", args=[self.period.pk])).status_code, 404
+        )
 
     def test_one_report_means_no_chooser_at_all(self):
         project = Project.objects.create(name="Vahan", prism_id="PR-01", leader=self.pl)
@@ -151,30 +176,54 @@ class MPRFillFlowTests(TestCase):
         self.assertFalse(resp.context["split"])
         self.assertContains(resp, "Major events planned")  # sections right there
         # No query string needed — there is only one report it could belong to.
-        self.client.post(reverse("mpr_entry_add", args=[self.period.pk, MPREntry.SIGNIFICANT]),
-                         {"description": "Rollout"})
+        self.client.post(
+            reverse("mpr_entry_add", args=[self.period.pk, MPREntry.SIGNIFICANT]), {"description": "Rollout"}
+        )
         entry = MPREntry.objects.get()
         self.assertEqual((entry.scope, entry.project), (MPREntry.PROJECT, project))
+
+    def test_single_sections_take_one_row_and_prose_caps_at_500_words(self):
+        project = Project.objects.create(name="Vahan", prism_id="PR-01", leader=self.pl)
+        add = reverse("mpr_entry_add", args=[self.period.pk, MPREntry.SIGNIFICANT])
+        resp = self.client.post(add, {"description": "word " * 501})
+        self.assertContains(resp, "500 words or fewer")
+        self.assertFalse(MPREntry.objects.exists())
+        self.client.post(add, {"description": "Rollout"})
+        entry = MPREntry.objects.get()
+        # A second Add goes to the existing row instead of making another.
+        self.assertRedirects(
+            self.client.post(add, {"description": "Again"}),
+            reverse("mpr_entry_edit", args=[self.period.pk, entry.kind, entry.pk]),
+        )
+        self.assertEqual(MPREntry.objects.count(), 1)
+        self.assertNotContains(self.client.get(reverse("mpr_month", args=[self.period.pk])), "Add another")
+        # Other sections still take several rows.
+        training = reverse("mpr_entry_add", args=[self.period.pk, MPREntry.TRAINING])
+        self.client.post(training, {"title": "GIS"})
+        self.client.post(training, {"title": "QGIS"})
+        self.assertEqual(project.mpr_entries.filter(kind=MPREntry.TRAINING).count(), 2)
 
     def test_cannot_file_into_a_report_you_do_not_owe(self):
         add = reverse("mpr_entry_add", args=[self.period.pk, MPREntry.SIGNIFICANT])
         # self.pl is not a DIO, so the district report isn't theirs to fill.
-        self.assertEqual(self.client.post(f"{add}?scope=district",
-                                          {"description": "Not mine"}).status_code, 404)
+        self.assertEqual(
+            self.client.post(f"{add}?scope=district", {"description": "Not mine"}).status_code, 404
+        )
         self.assertFalse(MPREntry.objects.exists())
 
-        dio = User.objects.create_user("dio.solo", password="x", is_dio=True,
-                                       must_change_password=False)
+        dio = User.objects.create_user("dio.solo", password="x", is_dio=True, must_change_password=False)
         self.client.force_login(dio)
         # ...and the PL-only section isn't part of a district report.
-        self.assertEqual(self.client.post(
-            reverse("mpr_entry_add", args=[self.period.pk, MPREntry.ENHANCEMENT]),
-            {"title": "Nope"}).status_code, 404)
+        self.assertEqual(
+            self.client.post(
+                reverse("mpr_entry_add", args=[self.period.pk, MPREntry.ENHANCEMENT]), {"title": "Nope"}
+            ).status_code,
+            404,
+        )
         self.assertFalse(MPREntry.objects.exists())
 
     def test_dio_does_not_get_the_pl_only_section(self):
-        dio = User.objects.create_user("dio.two", password="x", is_dio=True,
-                                       must_change_password=False)
+        dio = User.objects.create_user("dio.two", password="x", is_dio=True, must_change_password=False)
         self.client.force_login(dio)
         resp = self.client.get(reverse("mpr_month", args=[self.period.pk]))
         self.assertNotContains(resp, "Major enhancements")
@@ -183,29 +232,36 @@ class MPRFillFlowTests(TestCase):
         Project.objects.create(name="Sarathi", prism_id="PR-01", leader=self.pl)
         resp = self.client.post(
             reverse("mpr_entry_add", args=[self.period.pk, MPREntry.AWARD]),
-            {"award_level": "national", "title": "Digital India Award",
-             "date": "2026-07-12", "description": "For the Vahan rollout."},
+            {
+                "award_level": "national",
+                "title": "Digital India Award",
+                "date": "2026-07-12",
+                "description": "For the Vahan rollout.",
+            },
         )
         self.assertRedirects(resp, reverse("mpr_month", args=[self.period.pk]))
         entry = MPREntry.objects.get()
         self.assertEqual((entry.author, entry.kind), (self.pl, MPREntry.AWARD))
-        self.assertContains(self.client.get(reverse("mpr_month", args=[self.period.pk])),
-                            "Digital India Award")
+        self.assertContains(
+            self.client.get(reverse("mpr_month", args=[self.period.pk])), "Digital India Award"
+        )
 
     def test_closed_month_rejects_new_entries(self):
         MPRPeriod.objects.filter(pk=self.period.pk).update(is_open=False)
         resp = self.client.post(
-            reverse("mpr_entry_add", args=[self.period.pk, MPREntry.SIGNIFICANT]),
-            {"description": "Anything"})
+            reverse("mpr_entry_add", args=[self.period.pk, MPREntry.SIGNIFICANT]), {"description": "Anything"}
+        )
         self.assertRedirects(resp, reverse("mpr_month", args=[self.period.pk]))
         self.assertFalse(MPREntry.objects.exists())
 
     def test_cannot_edit_someone_elses_entry(self):
         other = User.objects.create_user("pl.two", password="x", is_pl=True)
-        entry = MPREntry.objects.create(period=self.period, author=other,
-                                        kind=MPREntry.SIGNIFICANT, description="Theirs")
+        entry = MPREntry.objects.create(
+            period=self.period, author=other, kind=MPREntry.SIGNIFICANT, description="Theirs"
+        )
         resp = self.client.get(
-            reverse("mpr_entry_edit", args=[self.period.pk, MPREntry.SIGNIFICANT, entry.pk]))
+            reverse("mpr_entry_edit", args=[self.period.pk, MPREntry.SIGNIFICANT, entry.pk])
+        )
         self.assertEqual(resp.status_code, 404)
 
     def test_parameters_carry_last_months_reporting_figure_forward(self):
@@ -219,14 +275,37 @@ class MPRFillFlowTests(TestCase):
         value = ParameterValue.objects.get(period=self.period, parameter=param)
         self.assertEqual(value.previous_month, "1,204")
 
-        resp = self.client.post(url, {
-            "form-TOTAL_FORMS": "1", "form-INITIAL_FORMS": "1",
-            "form-0-id": str(value.pk), "form-0-previous_month": "1,204",
-            "form-0-reporting_month": "1,318", "form-0-cumulative": "48,902",
-        })
+        resp = self.client.post(
+            url,
+            {
+                "form-TOTAL_FORMS": "1",
+                "form-INITIAL_FORMS": "1",
+                "form-0-id": str(value.pk),
+                "form-0-previous_month": "1,204",
+                "form-0-reporting_month": "1,318",
+                "form-0-cumulative": "48,902",
+            },
+        )
         self.assertRedirects(resp, reverse("mpr_month", args=[self.period.pk]))
         value.refresh_from_db()
         self.assertEqual(value.reporting_month, "1,318")
+
+    def test_parameters_show_last_months_total_and_catch_up_a_late_previous_month(self):
+        project = Project.objects.create(name="Vahan", prism_id="PR-77", leader=self.pl)
+        param = ProjectParameter.objects.create(project=project, name="Challans issued")
+        url = reverse("mpr_parameters", args=[self.period.pk, project.pk])
+        self.client.get(url)  # opened before June was filled in
+        june = MPRPeriod.objects.create(year=2026, month=6, due_date="2026-07-05")
+        ParameterValue.objects.create(
+            period=june, parameter=param, reporting_month="1,204", cumulative="47,584"
+        )
+
+        resp = self.client.get(url)
+        self.assertEqual(ParameterValue.objects.get(period=self.period).previous_month, "1,204")
+        self.assertContains(resp, "June 2026: 47,584")
+        self.assertContains(resp, 'data-last-cumulative="47,584"')
+        # The suggestion is offered, never saved on its own.
+        self.assertEqual(ParameterValue.objects.get(period=self.period).cumulative, "")
 
     def test_parameters_of_someone_elses_project_are_not_reachable(self):
         other = User.objects.create_user("pl.three", password="x", is_pl=True)
@@ -238,14 +317,30 @@ class MPRFillFlowTests(TestCase):
 class LockFlowTests(TestCase):
     """Freezing a month, and getting it reopened."""
 
+    def test_month_list_splits_open_from_locked_and_closed(self):
+        june = MPRPeriod.objects.create(year=2026, month=6, due_date="2026-07-05", is_open=False)
+        august = MPRPeriod.objects.create(year=2026, month=8, due_date="2026-09-05")
+        self.lock()  # July
+        resp = self.client.get(reverse("mpr_list"))
+        (_, _, open_), (_, _, locked) = [(t, n, list(p)) for t, n, p in resp.context["sections"]]
+        self.assertEqual(open_, [august])
+        MPRLock.objects.all().delete()  # all open again: newest first
+        (_, _, open_), _ = self.client.get(reverse("mpr_list")).context["sections"]
+        self.assertEqual(list(open_), [august, self.period])
+        self.assertEqual(set(locked), {june, self.period})
+        self.assertContains(resp, "Locked by you or closed by an admin")
+
     def setUp(self):
-        self.user = User.objects.create_user("dio.jaipur", password="x", name="Kavita Bhargava",
-                                             is_dio=True, must_change_password=False)
-        self.admin = User.objects.create_user("admin.one", password="x", is_staff=True,
-                                              must_change_password=False)
+        self.user = User.objects.create_user(
+            "dio.jaipur", password="x", name="Kavita Bhargava", is_dio=True, must_change_password=False
+        )
+        self.admin = User.objects.create_user(
+            "admin.one", password="x", is_staff=True, must_change_password=False
+        )
         self.period = MPRPeriod.objects.create(year=2026, month=7, due_date="2026-08-05")
-        self.entry = MPREntry.objects.create(period=self.period, author=self.user,
-                                             kind=MPREntry.SIGNIFICANT, description="Rollout")
+        self.entry = MPREntry.objects.create(
+            period=self.period, author=self.user, kind=MPREntry.SIGNIFICANT, description="Rollout"
+        )
         self.client.force_login(self.user)
 
     def lock(self):
@@ -261,16 +356,20 @@ class LockFlowTests(TestCase):
         self.lock()
         self.assertTrue(MPRLock.objects.exists())
         # Already locked: the confirm page bounces instead of offering a second lock.
-        self.assertRedirects(self.client.get(reverse("mpr_lock", args=[self.period.pk])),
-                             reverse("mpr_month", args=[self.period.pk]))
+        self.assertRedirects(
+            self.client.get(reverse("mpr_lock", args=[self.period.pk])),
+            reverse("mpr_month", args=[self.period.pk]),
+        )
         self.assertEqual(MPRLock.objects.count(), 1)
 
     def test_locking_freezes_adds_edits_and_deletes(self):
         self.assertRedirects(self.lock(), reverse("mpr_month", args=[self.period.pk]))
         self.assertTrue(MPRLock.objects.filter(period=self.period, user=self.user).exists())
 
-        self.client.post(reverse("mpr_entry_add", args=[self.period.pk, MPREntry.SIGNIFICANT]),
-                         {"description": "Sneaked in after locking"})
+        self.client.post(
+            reverse("mpr_entry_add", args=[self.period.pk, MPREntry.SIGNIFICANT]),
+            {"description": "Sneaked in after locking"},
+        )
         self.client.post(reverse("mpr_entry_delete", args=[self.entry.pk]))
         self.assertEqual([e.description for e in MPREntry.objects.all()], ["Rollout"])
 
@@ -285,15 +384,23 @@ class LockFlowTests(TestCase):
         self.client.get(url)
         value = ParameterValue.objects.get(parameter=param)
         self.lock()
-        self.client.post(url, {"form-TOTAL_FORMS": "1", "form-INITIAL_FORMS": "1",
-                               "form-0-id": str(value.pk), "form-0-reporting_month": "9,999"})
+        self.client.post(
+            url,
+            {
+                "form-TOTAL_FORMS": "1",
+                "form-INITIAL_FORMS": "1",
+                "form-0-id": str(value.pk),
+                "form-0-reporting_month": "9,999",
+            },
+        )
         value.refresh_from_db()
         self.assertEqual(value.reporting_month, "")
 
     def test_unlock_request_then_admin_reopens(self):
         self.lock()
-        self.client.post(reverse("mpr_unlock_request", args=[self.period.pk]),
-                         {"reason": "Participant count was wrong."})
+        self.client.post(
+            reverse("mpr_unlock_request", args=[self.period.pk]), {"reason": "Participant count was wrong."}
+        )
         lock = MPRLock.objects.get()
         self.assertTrue(lock.unlock_requested)
         self.assertEqual(lock.unlock_reason, "Participant count was wrong.")
@@ -306,6 +413,8 @@ class LockFlowTests(TestCase):
 
         # Reopened: the user can edit again.
         self.client.force_login(self.user)
-        self.client.post(reverse("mpr_entry_add", args=[self.period.pk, MPREntry.SIGNIFICANT]),
-                         {"description": "Added after reopening"})
+        self.client.post(
+            reverse("mpr_entry_add", args=[self.period.pk, MPREntry.SIGNIFICANT]),
+            {"description": "Added after reopening"},
+        )
         self.assertEqual(MPREntry.objects.count(), 2)

@@ -2,8 +2,9 @@
 Filling a month. A month holds one report per thing the user owns — one for their
 districts, one per project they lead — and every view here is scoped to request.user.
 """
+
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Q
+from django.db.models import Count, Exists, OuterRef, Q
 from django.forms import modelformset_factory
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -13,12 +14,13 @@ from ..forms import entry_form_class
 from ..models import MPREntry, MPRLock, MPRPeriod, ParameterValue, Project
 
 
-
-
 def _kinds(scope):
     """Sections in one report. The Project-Leader-only ones aren't part of a district report."""
-    return [(k, label) for k, label in MPREntry.KIND_CHOICES
-            if scope == MPREntry.PROJECT or k not in MPREntry.PL_ONLY_KINDS]
+    return [
+        (k, label)
+        for k, label in MPREntry.KIND_CHOICES
+        if scope == MPREntry.PROJECT or k not in MPREntry.PL_ONLY_KINDS
+    ]
 
 
 def _lock(user, period):
@@ -28,10 +30,20 @@ def _lock(user, period):
 def _back(user, period, project):
     """Where a form returns to: the report the row belongs to, or the month page."""
     if len(_my_reports(user)) < 2:
-        return redirect("mpr_month", pk=period.pk)   # one report, and it lives there
+        return redirect("mpr_month", pk=period.pk)  # one report, and it lives there
     if project:
         return redirect("mpr_project_report", pk=period.pk, project_pk=project.pk)
     return redirect("mpr_district_report", pk=period.pk)
+
+
+def _back_link(user, period, project):
+    """_back for a page's Back and Cancel links, so leaving without saving lands where
+    saving would: the report you came from, not the month page."""
+    if len(_my_reports(user)) < 2:
+        label = str(period)
+    else:
+        label = project.name if project else dict(MPREntry.SCOPE_CHOICES)[MPREntry.DISTRICT]
+    return {"back": _back(user, period, project).url, "back_label": label}
 
 
 def _editable(user, period):
@@ -42,8 +54,19 @@ def _editable(user, period):
 @login_required
 def mpr_list(request):
     periods = MPRPeriod.objects.annotate(
-        mine=Count("entries", filter=Q(entries__author=request.user)))
-    return render(request, "accounts/mpr_list.html", {"periods": periods})
+        mine=Count("entries", filter=Q(entries__author=request.user)),
+        locked=Exists(MPRLock.objects.filter(period=OuterRef("pk"), user=request.user)),
+    ).order_by("-year", "-month")  # Meta.ordering is dropped on GROUP BY queries
+    # Split the way _editable() does: a month is open only if you can still change it.
+    sections = [
+        ("Open", "Months you can still fill.", [p for p in periods if p.is_open and not p.locked]),
+        (
+            "Locked",
+            "Locked by you or closed by an admin. View only.",
+            [p for p in periods if not p.is_open or p.locked],
+        ),
+    ]
+    return render(request, "accounts/mpr_list.html", {"sections": sections})
 
 
 def _my_reports(user):
@@ -76,7 +99,12 @@ def _group(user, period, entries, scope, project):
         "sub": sub,
         "url": url,
         "sections": [
-            {"kind": kind, "label": label, "rows": [e for e in rows if e.kind == kind]}
+            {
+                "kind": kind,
+                "label": label,
+                "rows": [e for e in rows if e.kind == kind],
+                "single": kind in MPREntry.SINGLE_KINDS,
+            }
             for kind, label in _kinds(scope)
         ],
         # A project report carries its own figures table; a district report has none.
@@ -153,8 +181,11 @@ def mpr_entry_form(request, period_pk, kind, pk=None):
     if not _editable(request.user, period):
         return redirect("mpr_month", pk=period.pk)
     # Editing is limited to the signed-in user's own rows.
-    entry = (get_object_or_404(MPREntry, pk=pk, author=request.user, period=period) if pk
-             else MPREntry(period=period, author=request.user, kind=kind))
+    entry = (
+        get_object_or_404(MPREntry, pk=pk, author=request.user, period=period)
+        if pk
+        else MPREntry(period=period, author=request.user, kind=kind)
+    )
     if not pk:
         # New row: the query string says which report it belongs to. Users who owe
         # only one never see the question, and nobody can file into a report they
@@ -165,18 +196,28 @@ def mpr_entry_form(request, period_pk, kind, pk=None):
         entry.scope = request.GET.get("scope") or only[0]
         # A named project must be one of theirs. Don't fall back to their own project
         # when the name doesn't match — that would file the row somewhere they didn't ask.
-        entry.project = (next((p for _, p in reports if p and str(p.pk) == wanted), None)
-                         if wanted else only[1])
+        entry.project = (
+            next((p for _, p in reports if p and str(p.pk) == wanted), None) if wanted else only[1]
+        )
         if (entry.scope, entry.project) not in reports or kind not in dict(_kinds(entry.scope)):
             raise Http404("That section isn't part of this report")
+        if kind in MPREntry.SINGLE_KINDS:
+            existing = period.entries.filter(
+                author=request.user, kind=kind, scope=entry.scope, project=entry.project
+            ).first()
+            if existing:
+                return redirect("mpr_entry_edit", period.pk, kind, existing.pk)
     form = entry_form_class(kind)(request.POST or None, request.FILES or None, instance=entry)
     if request.method == "POST" and form.is_valid():
         form.save()
         return _back(request.user, period, entry.project)
     return render(request, "accounts/mpr_entry_form.html", {
-        "form": form, "period": period, "entry": entry if pk else None,
+        "form": form,
+        "period": period,
+        "entry": entry if pk else None,
         "label": dict(MPREntry.KIND_CHOICES)[kind],
         "scope_label": entry.project.name if entry.project else dict(MPREntry.SCOPE_CHOICES)[entry.scope],
+        **_back_link(request.user, period, entry.project),
     })
 
 
@@ -201,19 +242,33 @@ def mpr_parameters(request, period_pk, project_pk):
 
     # Carry last month's reporting figure into "previous month" so it isn't retyped.
     prev = _previous_period(period)
-    carried = dict(ParameterValue.objects.filter(
-        period=prev, parameter__project=project).values_list("parameter_id", "reporting_month"))
-    for param in project.parameters.all():
-        ParameterValue.objects.get_or_create(
-            period=period, parameter=param,
-            defaults={"previous_month": carried.get(param.id, "")})
-
-    values = ParameterValue.objects.filter(
-        period=period, parameter__project=project).select_related("parameter")
-    FormSet = modelformset_factory(
-        ParameterValue, fields=["previous_month", "reporting_month", "cumulative"], extra=0)
+    last = {v.parameter_id: v for v in ParameterValue.objects.filter(period=prev, parameter__project=project)}
     editable = _editable(request.user, period)
+    for param in project.parameters.all():
+        carried = last[param.id].reporting_month if param.id in last else ""
+        value, _ = ParameterValue.objects.get_or_create(
+            period=period, parameter=param, defaults={"previous_month": carried}
+        )
+        # Opened before last month was filled in: pick the figure up now it exists.
+        if editable and carried and not value.previous_month:
+            value.previous_month = carried
+            value.save(update_fields=["previous_month"])
+
+    values = ParameterValue.objects.filter(period=period, parameter__project=project).select_related(
+        "parameter"
+    )
+    FormSet = modelformset_factory(
+        ParameterValue, fields=["previous_month", "reporting_month", "cumulative"], extra=0
+    )
     formset = FormSet(request.POST or None, queryset=values)
+    for form in formset:
+        # Last month's since-inception figure: shown on the row, and the base app.js
+        # adds this month to for the suggested total. The PL still has to accept it.
+        form.last_cumulative = (
+            last[form.instance.parameter_id].cumulative if form.instance.parameter_id in last else ""
+        )
+        if editable and form.last_cumulative:
+            form.fields["cumulative"].widget.attrs["data-last-cumulative"] = form.last_cumulative
     if not editable:
         # Read-only month: disabled fields also make Django ignore anything POSTed.
         for form in formset:
@@ -222,6 +277,11 @@ def mpr_parameters(request, period_pk, project_pk):
     if request.method == "POST" and editable and formset.is_valid():
         formset.save()
         return _back(request.user, period, project)
-    return render(request, "accounts/mpr_parameters.html",
-                  {"formset": formset, "period": period, "project": project,
-                   "editable": editable})
+    return render(request, "accounts/mpr_parameters.html", {
+        "formset": formset,
+        "period": period,
+        "project": project,
+        "prev": prev,
+        "editable": editable,
+        **_back_link(request.user, period, project),
+    })

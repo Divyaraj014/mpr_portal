@@ -1,7 +1,7 @@
 {% extends "accounts/app.html" %}
 {% block title %}Lock {{ period }}{% endblock %}
 {% block content %}
-<a href="{% url 'mpr_month' period.pk %}" class="btn-ghost btn-back">← Cancel</a>
+<a href="{% url 'mpr_month' period.pk %}" class="btn-ghost btn-back">Cancel</a>
 <div class="card w-sm">
   <div class="t-title">Lock {{ period }}?</div>
   <p class="t-val">

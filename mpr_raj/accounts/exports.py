@@ -127,11 +127,11 @@ def _docx(period, tabs):
             continue
         grid = doc.add_table(rows=1, cols=len(table["headers"]))
         grid.style = "Table Grid"
-        for cell, header in zip(grid.rows[0].cells, table["headers"]):
+        for cell, header in zip(grid.rows[0].cells, table["headers"], strict=True):
             cell.text = header
             cell.paragraphs[0].runs[0].bold = True
         for row in table["rows"]:
-            for cell, value in zip(grid.add_row().cells, row):
+            for cell, value in zip(grid.add_row().cells, row, strict=True):
                 cell.text = value
     buf = io.BytesIO()
     doc.save(buf)

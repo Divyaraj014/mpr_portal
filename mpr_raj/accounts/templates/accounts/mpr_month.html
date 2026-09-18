@@ -1,7 +1,7 @@
 {% extends "accounts/app.html" %}
 {% block title %}{{ period }}{% endblock %}
 {% block content %}
-<a href="{% url 'mpr_list' %}" class="btn-ghost btn-back">← Back to monthly reports</a>
+<a href="{% url 'mpr_list' %}" class="btn-ghost btn-back">Back to monthly reports</a>
 <div class="page-head">
   <div>
     <h1 class="pg">{{ period }}</h1>
@@ -85,7 +85,7 @@ one they are working on instead.
 {% if editable and groups %}
 <div class="card lockbar">
   <div class="grow">
-    <div class="t-key">Finished with {{ period }}?</div>
+    <div class="t-head">Finished with {{ period }}?</div>
     <div class="t-note">
       Locking submits {% if split %}every report above{% else %}all {{ filled }}
       {% if filled == 1 %}entry{% else %}entries{% endif %}{% endif %} for the month.

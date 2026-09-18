@@ -1,5 +1,3 @@
-from datetime import date
-from unittest.mock import patch
 
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
@@ -7,12 +5,9 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils.html import escape
 
-from .. import exports
-from ..admin import LookupAdmin, MPREntryAdmin
-from ..captcha import SESSION_KEY
-from ..forms import entry_form_class
+from ..admin import LookupAdmin
 from ..models import (
-    Department, Designation, District, MPREntry, MPRLock, MPRPeriod, ParameterValue,
+    Department, Designation, District, MPREntry, MPRPeriod, ParameterValue,
     PlaceOfPosting, Project, ProjectParameter,
 )
 
@@ -132,16 +127,22 @@ class AdminUserManagementTests(TestCase):
         proj.refresh_from_db()
         self.assertIsNone(proj.leader)                   # project survives, unassigned
 
-    def test_district_officer_blocks_deleting_the_user(self):
+    def test_deleting_a_dio_leaves_the_district_without_an_officer(self):
         self.client.force_login(self.admin)
         dio = User.objects.create_user("some.dio", password="x", is_dio=True)
-        District.objects.create(name="Kota", officer=dio)
+        dist = District.objects.create(name="Kota", officer=dio)
 
+        # District.officer is SET_NULL: the delete goes through, but the warning
+        # has to say the district is about to lose its officer.
         resp = self.client.get(reverse("user_delete", args=[dio.pk]))
-        self.assertContains(resp, "Officer for Kota")
-        resp = self.client.post(reverse("user_delete", args=[dio.pk]))
-        self.assertContains(resp, escape("Can’t delete"))
+        self.assertContains(resp, "Left without an officer: Kota")
         self.assertTrue(User.objects.filter(pk=dio.pk).exists())
+
+        self.assertRedirects(self.client.post(reverse("user_delete", args=[dio.pk])),
+                             reverse("user_list"))
+        self.assertFalse(User.objects.filter(pk=dio.pk).exists())
+        dist.refresh_from_db()
+        self.assertIsNone(dist.officer)                  # district survives, unassigned
 
     def test_admin_cannot_delete_own_account(self):
         self.client.force_login(self.admin)
@@ -249,8 +250,9 @@ class MasterDataTests(TestCase):
         # Default order is by Project ID; the Name heading re-sorts and reverses.
         self.assertEqual([p.code for p in self.client.get(url).context["projects"]],
                          ["P001", "P002", "P003"])
+        # Name sorts case-insensitively (Lower), so eMitra files under E, not after V.
         self.assertEqual([p.name for p in self.client.get(url, {"sort": "-name"}).context["projects"]],
-                         ["eMitra", "Vahan", "Sarathi"])
+                         ["Vahan", "Sarathi", "eMitra"])
 
         none = self.client.get(url, {"category": "state", "leader": "unassigned"})
         self.assertEqual(list(none.context["projects"]), [])
@@ -387,7 +389,8 @@ class MasterDataTests(TestCase):
                           "leader": emp.pk})
         self.client.post(reverse("district_edit", args=[dist.pk]),
                          {"name": "Udaipur", "officer": emp.pk})
-        proj.refresh_from_db(); dist.refresh_from_db()
+        proj.refresh_from_db()
+        dist.refresh_from_db()
         self.assertEqual(proj.leader, emp)
         self.assertEqual(dist.officer, emp)
         # Clearing the selection unmaps them.

@@ -1,7 +1,7 @@
 [project]
 name = "mpr-raj"
 version = "0.1.0"
-description = "Add your description here"
+description = "Monthly Progress Report portal for NIC Rajasthan district and project reporting"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -13,3 +13,16 @@ dependencies = [
     "python-docx>=1.2.0",
     "weasyprint>=69.0",
 ]
+
+[dependency-groups]
+dev = ["ruff>=0.14.0"]
+
+[tool.ruff]
+# 110 matches the widest line already in the tree; no reformat churn on adoption.
+line-length = 110
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+# No "I": ruff's import sorter only emits Black-style one-name-per-line, which turns
+# this codebase's fill-wrapped imports into 30-line blocks. F401 still finds dead ones.
+select = ["E", "F", "W", "UP", "B", "DJ", "C4"]

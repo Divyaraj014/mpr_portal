@@ -7,6 +7,11 @@
     <div class="pg-sub">Your MPR for each reporting month.</div>
   </div>
 </div>
+{% for title, note, periods in sections %}
+<div class="list-head">
+  <div class="t-head">{{ title }}</div>
+  <div class="t-note">{{ note }}</div>
+</div>
 {# Column widths live in app.css, under .tbl-months. #}
 <div class="table tbl-months">
   <div class="thead">
@@ -17,21 +22,27 @@
     <div class="t-key">{{ p }}</div>
     <div class="t-val">{{ p.due_date|date:"j F Y" }}</div>
     <div>
-      {% if p.is_open %}<span class="status st-green">Open</span>
-      {% else %}<span class="status st-gray">Closed</span>{% endif %}
+      {% if not p.is_open %}<span class="status st-gray">Closed</span>
+      {% elif p.locked %}<span class="status st-navy">Locked</span>
+      {% else %}<span class="status st-green">Open</span>{% endif %}
       <span class="t-note">
         {{ p.mine }} {% if p.mine == 1 %}entry{% else %}entries{% endif %}
       </span>
     </div>
     <a href="{% url 'mpr_month' p.pk %}" class="t-key">
-      {% if p.is_open %}Fill{% else %}View{% endif %}
+      {% if p.is_open and not p.locked %}Fill{% else %}View{% endif %}
     </a>
   </div>
   {% empty %}
   <div class="trow empty">
-    <div class="t-block">No reporting months yet</div>
+    {% if forloop.parentloop.first %}
+    <div class="t-block">No open months</div>
     <div class="t-note">An admin opens a month before data entry can start.</div>
+    {% else %}
+    <div class="t-note">Nothing locked yet.</div>
+    {% endif %}
   </div>
   {% endfor %}
 </div>
+{% endfor %}
 {% endblock %}

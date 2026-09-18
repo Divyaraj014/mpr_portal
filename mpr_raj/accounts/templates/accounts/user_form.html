@@ -1,7 +1,7 @@
 {% extends "accounts/app.html" %}
 {% block title %}{% if edit_user %}Edit user{% else %}Add user{% endif %}{% endblock %}
 {% block content %}
-<a href="{% url 'user_list' %}" class="btn-ghost btn-back">← Back to users</a>
+<a href="{% url 'user_list' %}" class="btn-ghost btn-back">Back to users</a>
 <div class="card w-lg">
   {% if edit_user %}
   <div class="form-head">

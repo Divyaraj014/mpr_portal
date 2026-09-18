@@ -1,7 +1,7 @@
 {% extends "accounts/app.html" %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
-<a href="{% url list_url %}" class="btn-ghost btn-back">← {{ back_label }}</a>
+<a href="{% url list_url %}" class="btn-ghost btn-back">{{ back_label }}</a>
 <div class="card w-sm">
   <div class="t-title">{{ title }}</div>
   {% if subtitle %}<div class="pg-sub">{{ subtitle }}</div>{% endif %}

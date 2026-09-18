@@ -1,7 +1,7 @@
 {% extends "accounts/app.html" %}
 {% block title %}{{ label }}{% endblock %}
 {% block content %}
-<a href="{% url 'mpr_month' period.pk %}" class="btn-ghost btn-back">← Back to {{ period }}</a>
+<a href="{{ back }}" class="btn-ghost btn-back">Back to {{ back_label }}</a>
 <div class="card w-md">
   <div class="t-title">{{ label }}</div>
   <div class="pg-sub">{{ period }} · {{ scope_label }}</div>
@@ -16,7 +16,7 @@
     {% endfor %}
     <div class="actions">
       <button type="submit" class="btn">Save</button>
-      <a href="{% url 'mpr_month' period.pk %}" class="btn-ghost">Cancel</a>
+      <a href="{{ back }}" class="btn-ghost">Cancel</a>
     </div>
   </form>
 </div>

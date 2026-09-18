@@ -76,7 +76,7 @@ class PeriodForm(forms.ModelForm):
         labels = {"is_open": "Open for filling"}
         help_texts = {
             "is_open": "Closing a month makes it read-only for everyone, locked or not. "
-                       "Reopen it here at any time; nothing filed is lost either way.",
+            "Reopen it here at any time; nothing filed is lost either way.",
         }
         widgets = {"due_date": forms.DateInput(attrs={"type": "date"})}  # native picker, no JS
 
@@ -115,6 +115,14 @@ class ProjectParameterForm(forms.ModelForm):
         return super().save(commit)
 
 
+MAX_WORDS = 500
+
+
+def max_words(value):
+    if len(value.split()) > MAX_WORDS:
+        raise forms.ValidationError(f"Keep this to {MAX_WORDS} words or fewer (it has {len(value.split())}).")
+
+
 def entry_form_class(kind):
     """Form for one MPR section. Which fields it shows lives on the model (MPREntry.FIELDS)."""
     date_input = forms.DateInput(attrs={"type": "date"})  # native picker, no JS
@@ -123,11 +131,21 @@ def entry_form_class(kind):
         MPREntry,
         fields=MPREntry.FIELDS[kind],
         labels=MPREntry.LABELS.get(kind, {}),
-        widgets={"date": date_input, "to_date": date_input,
-                 "description": prose, "remarks": prose, "suggestions": prose},
+        widgets={
+            "date": date_input,
+            "to_date": date_input,
+            "description": prose,
+            "remarks": prose,
+            "suggestions": prose,
+        },
     )
     # Every column is optional on the model (they differ per section), so the form
     # insists on the one that identifies the row. Otherwise blank rows sail through.
+    for name in ("description", "remarks", "suggestions"):
+        if name in form_class.base_fields:
+            form_class.base_fields[name].validators.append(max_words)
+            form_class.base_fields[name].help_text = f"Up to {MAX_WORDS} words."
+            form_class.base_fields[name].widget.attrs["data-max-words"] = MAX_WORDS  # app.js counter
     headline = "title" if "title" in form_class.base_fields else "description"
     form_class.base_fields[headline].required = True
     return form_class
@@ -136,8 +154,7 @@ def entry_form_class(kind):
 class UserForm(forms.ModelForm):
     # Layout order for the "Employee details" block — the template renders
     # form.details() so it doesn't have to name each field.
-    DETAIL_FIELDS = ["name", "email", "employee_code", "designation",
-                     "phone", "ip_phone", "place_of_posting"]
+    DETAIL_FIELDS = ["name", "email", "employee_code", "designation", "phone", "ip_phone", "place_of_posting"]
 
     temp_password = forms.CharField(
         label="Temporary password",
@@ -149,16 +166,28 @@ class UserForm(forms.ModelForm):
     # projects/districts from here too. Reassigning steals a project from whoever
     # held it (the FK guarantees a single leader/officer).
     projects = forms.ModelMultipleChoiceField(
-        queryset=Project.objects.all(), required=False, widget=forms.CheckboxSelectMultiple)
+        queryset=Project.objects.all(), required=False, widget=forms.CheckboxSelectMultiple
+    )
     districts = forms.ModelMultipleChoiceField(
-        queryset=District.objects.all(), required=False, widget=forms.CheckboxSelectMultiple)
+        queryset=District.objects.all(), required=False, widget=forms.CheckboxSelectMultiple
+    )
 
     class Meta:
         model = User
         fields = [
-            "email", "name", "employee_code", "designation", "phone",
-            "ip_phone", "place_of_posting", "is_staff", "is_sio", "is_gl", "is_pl",
-            "is_dio", "is_active",
+            "email",
+            "name",
+            "employee_code",
+            "designation",
+            "phone",
+            "ip_phone",
+            "place_of_posting",
+            "is_staff",
+            "is_sio",
+            "is_gl",
+            "is_pl",
+            "is_dio",
+            "is_active",
         ]
         labels = {"is_staff": "Admin", "is_active": "Account enabled", "ip_phone": "IP phone"}
 
@@ -172,8 +201,8 @@ class UserForm(forms.ModelForm):
         else:
             self.fields["temp_password"].label = "Reset password"
             self.fields["temp_password"].help_text = (
-                "Leave blank to keep the current password. Setting one forces a "
-                "change at the next sign-in.")
+                "Leave blank to keep the current password. Setting one forces a change at the next sign-in."
+            )
             self.fields["projects"].initial = self.instance.projects.all()
             self.fields["districts"].initial = self.instance.districts.all()
 

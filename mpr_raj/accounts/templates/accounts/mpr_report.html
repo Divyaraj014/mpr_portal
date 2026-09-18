@@ -1,7 +1,7 @@
 {% extends "accounts/app.html" %}
 {% block title %}{{ g.label }} · {{ period }}{% endblock %}
 {% block content %}
-<a href="{% url 'mpr_month' period.pk %}" class="btn-ghost btn-back">← Back to {{ period }}</a>
+<a href="{% url 'mpr_month' period.pk %}" class="btn-ghost btn-back">Back to {{ period }}</a>
 <div class="page-head">
   <div>
     <h1 class="pg">{{ g.label }}</h1>

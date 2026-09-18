@@ -13,7 +13,10 @@ class District(models.Model):
     name = models.CharField(max_length=100, unique=True)
     # One DIO per district; a DIO may hold several districts (reverse: user.districts).
     officer = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
         related_name="districts",
     )
 
@@ -80,18 +83,25 @@ class Project(models.Model):
     # and Postgres counts NULLs as distinct, so they don't fight over the unique
     # index the way empty strings would. The usual "no null on a CharField" rule
     # doesn't survive contact with a unique column that is often blank.
-    prism_id = models.CharField("PRISM ID", max_length=50, unique=True,
-                                null=True, blank=True)
+    prism_id = models.CharField("PRISM ID", max_length=50, unique=True, null=True, blank=True)
     category = models.CharField(max_length=10, choices=CATEGORY_CHOICES, default=STATE)
     department = models.ForeignKey(
-        Department, null=True, blank=True, on_delete=models.SET_NULL, related_name="projects",
+        Department,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="projects",
     )
     targeted_user = models.CharField(
-        max_length=200, blank=True, help_text="Who the project serves, e.g. Citizens, Dept. officials.")
+        max_length=200, blank=True, help_text="Who the project serves, e.g. Citizens, Dept. officials."
+    )
     url = models.URLField("URL", blank=True)
     # One PL per project; a PL may hold several projects (reverse: user.projects).
     leader = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
         related_name="projects",
     )
 
@@ -116,11 +126,14 @@ class Project(models.Model):
         a Postgres sequence if either the reuse or the race ever matters; that
         trades gapless numbering for codes that are never handed out twice.
         """
-        used = [int(m.group(1)) for code in cls.objects.values_list("code", flat=True)
-                if (m := re.fullmatch(r"P(\d+)", code or ""))]
+        used = [
+            int(m.group(1))
+            for code in cls.objects.values_list("code", flat=True)
+            if (m := re.fullmatch(r"P(\d+)", code or ""))
+        ]
         return f"P{max(used, default=0) + 1:03d}"
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs):  # noqa: DJ012 — reads after next_code(), which it calls.
         if not self.code:
             self.code = self.next_code()
         super().save(*args, **kwargs)
@@ -133,17 +146,23 @@ class User(AbstractUser):
     employee_code = models.CharField(max_length=30, blank=True)
     phone = models.CharField(max_length=15, blank=True)
     ip_phone = models.CharField(max_length=15, blank=True)
-    
+
     # Admin-managed lists, same as District/Department — deleting one leaves the
     # employees behind without a posting/grade rather than taking them with it.
 
     place_of_posting = models.ForeignKey(
-        PlaceOfPosting, null=True, blank=True, on_delete=models.SET_NULL,
+        PlaceOfPosting,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
         related_name="users",
     )
 
     designation = models.ForeignKey(
-        Designation, null=True, blank=True, on_delete=models.SET_NULL,
+        Designation,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
         related_name="users",
     )
 
@@ -248,20 +267,32 @@ class MPREntry(models.Model):
     ]
     # Project Leaders get these on top of the common sections; DIOs don't.
     PL_ONLY_KINDS = [ENHANCEMENT]
+    # One row per report per month; Add opens the existing row instead.
+    SINGLE_KINDS = [EVENT, SIGNIFICANT, NEW_ACTIVITY]
 
     # Column headings for the monitoring table, where the full labels don't fit.
     SHORT_LABELS = {
-        EVENT: "Events", REVIEW: "Reviews", TRAINING: "Training", AWARD: "Awards",
-        SIGNIFICANT: "Significant", NEW_ACTIVITY: "New", ENHANCEMENT: "Enhance.",
+        EVENT: "Events",
+        REVIEW: "Reviews",
+        TRAINING: "Training",
+        AWARD: "Awards",
+        SIGNIFICANT: "Significant",
+        NEW_ACTIVITY: "New",
+        ENHANCEMENT: "Enhance.",
     }
 
     EVENT_CATEGORIES = [
-        ("inauguration", "Inauguration"), ("launch", "Launch"),
-        ("press", "Press coverage"), ("other", "Others"),
+        ("inauguration", "Inauguration"),
+        ("launch", "Launch"),
+        ("press", "Press coverage"),
+        ("other", "Others"),
     ]
     AWARD_LEVELS = [
-        ("international", "International"), ("national", "National"),
-        ("state", "State"), ("district", "District"), ("local", "Local"),
+        ("international", "International"),
+        ("national", "National"),
+        ("state", "State"),
+        ("district", "District"),
+        ("local", "Local"),
     ]
 
     FIELDS = {
@@ -278,8 +309,13 @@ class MPREntry(models.Model):
     # Same column, different name depending on the section.
     LABELS = {
         REVIEW: {"date": "Date of review"},
-        TRAINING: {"title": "Topic", "date": "From date", "to_date": "To date",
-                   "participants": "No. of participants", "target_user": "Target user"},
+        TRAINING: {
+            "title": "Topic",
+            "date": "From date",
+            "to_date": "To date",
+            "participants": "No. of participants",
+            "target_user": "Target user",
+        },
         AWARD: {"title": "Award title", "date": "Award date"},
         EVENT: {"date": "Event date", "event_category": "Event category"},
         SIGNIFICANT: {"description": "Brief description"},
@@ -287,8 +323,7 @@ class MPREntry(models.Model):
     }
 
     period = models.ForeignKey(MPRPeriod, on_delete=models.PROTECT, related_name="entries")
-    author = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="mpr_entries")
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="mpr_entries")
     kind = models.CharField(max_length=20, choices=KIND_CHOICES)
     scope = models.CharField(max_length=10, choices=SCOPE_CHOICES, default=PROJECT)
 
@@ -307,7 +342,8 @@ class MPREntry(models.Model):
     # and deleting the project would leave the row behind belonging to nothing, quietly
     # changing every past report and export. A project with history isn't deletable.
     project = models.ForeignKey(
-        Project, null=True, blank=True, on_delete=models.PROTECT, related_name="mpr_entries")
+        Project, null=True, blank=True, on_delete=models.PROTECT, related_name="mpr_entries"
+    )
     photo = models.ImageField(upload_to="mpr/awards/", blank=True)
 
     class Meta:
@@ -324,8 +360,7 @@ class MPREntry(models.Model):
     @classmethod
     def label(cls, kind, name):
         """Column heading for one field of one section — LABELS wins, else the field's own."""
-        return capfirst(cls.LABELS.get(kind, {}).get(name)
-                        or cls._meta.get_field(name).verbose_name)
+        return capfirst(cls.LABELS.get(kind, {}).get(name) or cls._meta.get_field(name).verbose_name)
 
     def value(self, name):
         """The displayable value of one field (choice fields resolve to their label)."""
@@ -355,8 +390,7 @@ class MPRLock(models.Model):
     """
 
     period = models.ForeignKey(MPRPeriod, on_delete=models.CASCADE, related_name="locks")
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-                             related_name="mpr_locks")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="mpr_locks")
     locked_at = models.DateTimeField(auto_now_add=True)
     unlock_requested = models.BooleanField(default=False)
     unlock_reason = models.TextField(blank=True)
@@ -385,9 +419,7 @@ class ProjectParameter(models.Model):
 
     class Meta:
         ordering = ["order", "name"]
-        constraints = [
-            models.UniqueConstraint(fields=["project", "name"], name="unique_project_parameter")
-        ]
+        constraints = [models.UniqueConstraint(fields=["project", "name"], name="unique_project_parameter")]
 
     def __str__(self):
         return f"{self.project.name} — {self.name}"
@@ -397,8 +429,7 @@ class ParameterValue(models.Model):
     """The monthly numbers a PL enters for one ProjectParameter."""
 
     period = models.ForeignKey(MPRPeriod, on_delete=models.PROTECT, related_name="parameter_values")
-    parameter = models.ForeignKey(
-        ProjectParameter, on_delete=models.CASCADE, related_name="values")
+    parameter = models.ForeignKey(ProjectParameter, on_delete=models.CASCADE, related_name="values")
     # ponytail: text, because parameters range from counts to "NA"/"₹ 2.4 Cr".
     # Switch to Decimal if exports need arithmetic on them.
     previous_month = models.CharField(max_length=100, blank=True)
@@ -407,9 +438,7 @@ class ParameterValue(models.Model):
 
     class Meta:
         ordering = ["parameter"]
-        constraints = [
-            models.UniqueConstraint(fields=["period", "parameter"], name="unique_parameter_value")
-        ]
+        constraints = [models.UniqueConstraint(fields=["period", "parameter"], name="unique_parameter_value")]
 
     def __str__(self):
         return f"{self.parameter.name} @ {self.period}"

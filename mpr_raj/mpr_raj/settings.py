@@ -21,15 +21,9 @@ environ.Env.read_env(BASE_DIR / ".env")
 SECRET_KEY = env("SECRET_KEY")
 DEBUG = env("DEBUG")
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-
-
-# SECURITY WARNING: don't run with debug turned on in production!
-
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
+# Needed once the portal sits behind NIC's HTTPS front end.
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
 
 
 # Application definition
@@ -84,7 +78,7 @@ WSGI_APPLICATION = 'mpr_raj.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {
-    "default": env.db(),  
+    "default": env.db(),
 }
 
 
@@ -112,7 +106,9 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+# Due-date countdowns and export stamps read this via timezone.localdate();
+# on UTC they roll over at 05:30 IST and report the previous day.
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
@@ -123,7 +119,46 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'  # collectstatic target; serve this from nginx.
 
 # Uploads (award photos).
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+
+# Production hardening — everything `manage.py check --deploy` asks for. Off under
+# DEBUG so local HTTP development still works.
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    # TLS terminates at the reverse proxy, so Django only sees plain HTTP without this.
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+
+# Logging — console under DEBUG, a rotating file in production so 500s survive a restart.
+
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {'format': '{asctime} {levelname} {name} {message}', 'style': '{'},
+    },
+    'handlers': {
+        'console': {'class': 'logging.StreamHandler', 'formatter': 'verbose'},
+        'file': {'class': 'logging.handlers.RotatingFileHandler', 'formatter': 'verbose',
+                 'filename': LOG_DIR / 'mpr.log', 'maxBytes': 5 * 1024 * 1024, 'backupCount': 5},
+    },
+    'root': {
+        'handlers': ['console'] if DEBUG else ['console', 'file'],
+        'level': 'DEBUG' if DEBUG else 'INFO',
+    },
+    'loggers': {'django.request': {'level': 'ERROR', 'propagate': True}},
+}

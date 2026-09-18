@@ -1,5 +1,6 @@
 """Admin-managed master data: users, districts, projects (and their monthly
 parameters), and the reporting months themselves."""
+
 from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import user_passes_test
@@ -9,9 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render, resolve_url
 from django.urls import reverse
 
 from ..forms import DistrictForm, PeriodForm, ProjectForm, ProjectParameterForm, UserForm
-from ..models import (
-    Department, District, MPRPeriod, PlaceOfPosting, Project, ProjectParameter, User,
-)
+from ..models import Department, District, MPRPeriod, PlaceOfPosting, Project, ProjectParameter, User
 
 admin_required = user_passes_test(lambda u: u.is_staff)
 
@@ -29,8 +28,14 @@ USER_SORTS = {
     "roles": [f"-{flag}" for flag, _, _ in User.ROLES] + ["username"],
     "status": ["is_active", "is_activated", "username"],
 }
-USER_COLUMNS = [("username", "Login ID"), ("name", "Name"), ("designation", "Designation"),
-                ("place", "Place of posting"), ("roles", "Roles"), ("status", "Status")]
+USER_COLUMNS = [
+    ("username", "Login ID"),
+    ("name", "Name"),
+    ("designation", "Designation"),
+    ("place", "Place of posting"),
+    ("roles", "Roles"),
+    ("status", "Status"),
+]
 STATUS_FILTERS = {
     "active": {"is_active": True, "is_activated": True},
     "pending": {"is_active": True, "is_activated": False},
@@ -44,8 +49,13 @@ PROJECT_SORTS = {
     "category": ["category", Lower("name")],
     "leader": [Lower("leader__name"), "leader__username", "code"],
 }
-PROJECT_COLUMNS = [("code", "Project ID"), ("name", "Name"), ("prism", "PRISM ID"),
-                   ("category", "Category"), ("leader", "Assigned employee")]
+PROJECT_COLUMNS = [
+    ("code", "Project ID"),
+    ("name", "Name"),
+    ("prism", "PRISM ID"),
+    ("category", "Category"),
+    ("leader", "Assigned employee"),
+]
 
 
 def _flip(field):
@@ -71,12 +81,15 @@ def _ordering(request, sorts, labels, kept, default):
     # missing the sorted value bunch at one end. Reach for nulls_last only if that
     # actually bothers anyone.
     order = [_flip(fields[0]) if desc else fields[0], *fields[1:]]
-    columns = [{
-        "label": label,
-        # Clicking the sorted column reverses it; clicking any other starts ascending.
-        "url": "?" + urlencode({**kept, "sort": f"-{col}" if col == key and not desc else col}),
-        "arrow": ("▼" if desc else "▲") if col == key else "",
-    } for col, label in labels]
+    columns = [
+        {
+            "label": label,
+            # Clicking the sorted column reverses it; clicking any other starts ascending.
+            "url": "?" + urlencode({**kept, "sort": f"-{col}" if col == key and not desc else col}),
+            "arrow": ("▼" if desc else "▲") if col == key else "",
+        }
+        for col, label in labels
+    ]
     return order, columns
 
 
@@ -107,15 +120,31 @@ def user_list(request):
         "users": users,
         "columns": columns,
         "filters": [
-            {"name": "role", "label": "Role", "blank": "Any role", "selected": role,
-             "options": [(flag, full) for flag, full, _ in User.ROLES]},
-            {"name": "place", "label": "Place of posting", "blank": "Anywhere",
-             "selected": place,
-             "options": PlaceOfPosting.objects.values_list("pk", "name")},
-            {"name": "status", "label": "Status", "blank": "Any status",
-             "selected": status,
-             "options": [("active", "Active"), ("pending", "Pending first sign-in"),
-                         ("disabled", "Disabled")]},
+            {
+                "name": "role",
+                "label": "Role",
+                "blank": "Any role",
+                "selected": role,
+                "options": [(flag, full) for flag, full, _ in User.ROLES],
+            },
+            {
+                "name": "place",
+                "label": "Place of posting",
+                "blank": "Anywhere",
+                "selected": place,
+                "options": PlaceOfPosting.objects.values_list("pk", "name"),
+            },
+            {
+                "name": "status",
+                "label": "Status",
+                "blank": "Any status",
+                "selected": status,
+                "options": [
+                    ("active", "Active"),
+                    ("pending", "Pending first sign-in"),
+                    ("disabled", "Disabled"),
+                ],
+            },
         ],
         "filtered": bool(kept),
         "showing": len(users),
@@ -144,21 +173,20 @@ def user_delete(request, pk):
         # An admin deleting their own account would lock themselves out mid-request.
         return redirect("user_list")
     warnings = []
-    # Entries and districts are PROTECT — they block the delete rather than follow
-    # the user out. Projects are SET_NULL, so those really do just come loose.
+    # Only entries are PROTECT — they block the delete rather than follow the user
+    # out. Districts and projects are SET_NULL, so those really do just come loose.
     entries = user.mpr_entries.count()
     if entries:
         warnings.append(f"{entries} monthly report {'entry' if entries == 1 else 'entries'} "
                         "filed by this user — deletion is blocked until they are removed.")
     districts = [d.name for d in user.districts.all()]
     if districts:
-        warnings.append("Officer for " + ", ".join(districts) +
-                        " — reassign the district first.")
+        warnings.append("Left without an officer: " + ", ".join(districts) +
+                        " — nobody files their MPR until reassigned.")
     projects = [p.name for p in user.projects.all()]
     if projects:
         warnings.append("Left unassigned: " + ", ".join(projects) + ".")
-    return _confirm_delete(request, user, "user_list",
-                           f"user “{user.name or user.username}”", warnings)
+    return _confirm_delete(request, user, "user_list", f"user “{user.name or user.username}”", warnings)
 
 
 @admin_required
@@ -174,8 +202,12 @@ def district_form(request, pk=None):
     if request.method == "POST" and form.is_valid():
         form.save()
         return redirect("district_list")
-    ctx = {"form": form, "title": "Edit district" if district else "Add district",
-           "list_url": "district_list", "back_label": "Back to districts"}
+    ctx = {
+        "form": form,
+        "title": "Edit district" if district else "Add district",
+        "list_url": "district_list",
+        "back_label": "Back to districts",
+    }
     if district:
         ctx["delete_url"] = reverse("district_delete", args=[district.pk])
     return render(request, "accounts/master_form.html", ctx)
@@ -193,9 +225,10 @@ def _confirm_delete(request, obj, back, label, warnings=()):
             # filed entries). Name what holds it instead of returning a 500.
             kinds = sorted({str(type(o)._meta.verbose_name_plural) for o in exc.protected_objects})
             blocked = "Can’t delete — still referenced by " + ", ".join(kinds) + "."
-    return render(request, "accounts/confirm_delete.html",
-                  {"obj_label": label, "back_url": resolve_url(back),
-                   "warnings": warnings, "blocked": blocked})
+    return render(request, "accounts/confirm_delete.html", {
+        "obj_label": label, "back_url": resolve_url(back),
+        "warnings": warnings, "blocked": blocked,
+    })
 
 
 def _assigned_warning(user):
@@ -207,14 +240,14 @@ def _assigned_warning(user):
 @admin_required
 def district_delete(request, pk):
     d = get_object_or_404(District, pk=pk)
-    return _confirm_delete(request, d, "district_list", f"district “{d.name}”",
-                           _assigned_warning(d.officer))
+    return _confirm_delete(request, d, "district_list", f"district “{d.name}”", _assigned_warning(d.officer))
 
 
 @admin_required
 def period_list(request):
     """Reporting months: due dates and whether each still accepts data."""
-    periods = MPRPeriod.objects.annotate(filed=Count("entries"))
+    # Explicit: Meta.ordering is dropped on GROUP BY queries.
+    periods = MPRPeriod.objects.annotate(filed=Count("entries")).order_by("-year", "-month")
     return render(request, "accounts/period_list.html", {"periods": periods})
 
 
@@ -225,9 +258,12 @@ def period_form(request, pk=None):
     if request.method == "POST" and form.is_valid():
         form.save()
         return redirect("period_list")
-    return render(request, "accounts/master_form.html",
-                  {"form": form, "title": str(period) if period else "Open a reporting month",
-                   "list_url": "period_list", "back_label": "Back to reporting months"})
+    return render(request, "accounts/master_form.html", {
+        "form": form,
+        "title": str(period) if period else "Open a reporting month",
+        "list_url": "period_list",
+        "back_label": "Back to reporting months",
+    })
 
 
 @admin_required
@@ -247,8 +283,7 @@ def project_list(request):
     if leader in ("assigned", "unassigned"):
         projects = projects.filter(leader__isnull=leader == "unassigned")
 
-    kept = {k: v for k, v in (("category", category), ("department", department),
-                              ("leader", leader)) if v}
+    kept = {k: v for k, v in (("category", category), ("department", department), ("leader", leader)) if v}
     order, columns = _ordering(request, PROJECT_SORTS, PROJECT_COLUMNS, kept, "code")
     projects = projects.order_by(*order)
 
@@ -256,14 +291,27 @@ def project_list(request):
         "projects": projects,
         "columns": columns,
         "filters": [
-            {"name": "category", "label": "Category", "blank": "Any category",
-             "selected": category, "options": Project.CATEGORY_CHOICES},
-            {"name": "department", "label": "Department", "blank": "Any department",
-             "selected": department,
-             "options": Department.objects.values_list("pk", "name")},
-            {"name": "leader", "label": "Project Leader", "blank": "Anyone",
-             "selected": leader,
-             "options": [("assigned", "Assigned"), ("unassigned", "Not assigned")]},
+            {
+                "name": "category",
+                "label": "Category",
+                "blank": "Any category",
+                "selected": category,
+                "options": Project.CATEGORY_CHOICES,
+            },
+            {
+                "name": "department",
+                "label": "Department",
+                "blank": "Any department",
+                "selected": department,
+                "options": Department.objects.values_list("pk", "name"),
+            },
+            {
+                "name": "leader",
+                "label": "Project Leader",
+                "blank": "Anyone",
+                "selected": leader,
+                "options": [("assigned", "Assigned"), ("unassigned", "Not assigned")],
+            },
         ],
         "filtered": bool(kept),
         "showing": len(projects),
@@ -279,8 +327,7 @@ def project_form(request, pk=None):
     # so only the form that was actually submitted gets bound.
     adding = "add_parameter" in request.POST
     form = ProjectForm(None if adding else request.POST or None, instance=project)
-    param_form = ProjectParameterForm(request.POST if adding else None,
-                                      project=project) if project else None
+    param_form = ProjectParameterForm(request.POST if adding else None, project=project) if project else None
     if request.method == "POST":
         if adding and param_form.is_valid():
             param_form.save()
@@ -288,11 +335,15 @@ def project_form(request, pk=None):
         if not adding and form.is_valid():
             form.save()
             return redirect("project_list")
-    ctx = {"form": form, "title": "Edit project" if project else "Add project",
-           # The code is assigned by Project.save(), so it's shown, not edited.
-           "subtitle": f"Project ID {project.code}" if project else "",
-           "list_url": "project_list", "back_label": "Back to projects",
-           "param_form": param_form}
+    ctx = {
+        "form": form,
+        "title": "Edit project" if project else "Add project",
+        # The code is assigned by Project.save(), so it's shown, not edited.
+        "subtitle": f"Project ID {project.code}" if project else "",
+        "list_url": "project_list",
+        "back_label": "Back to projects",
+        "param_form": param_form,
+    }
     if project:
         ctx["delete_url"] = reverse("project_delete", args=[project.pk])
         ctx["parameters"] = project.parameters.annotate(months=Count("values"))
@@ -307,9 +358,11 @@ def project_delete(request, pk):
     # history) alive rather than following it out. Say so before the admin clicks.
     entries = p.mpr_entries.count()
     if entries:
-        warnings.append(f"{entries} monthly report {'entry' if entries == 1 else 'entries'} "
-                        "filed against this project — deletion is blocked so the "
-                        "reported data is kept.")
+        warnings.append(
+            f"{entries} monthly report {'entry' if entries == 1 else 'entries'} "
+            "filed against this project — deletion is blocked so the "
+            "reported data is kept."
+        )
     return _confirm_delete(request, p, "project_list", f"project “{p.name}”", warnings)
 
 
@@ -319,7 +372,18 @@ def project_parameter_delete(request, pk):
     months = param.values.count()
     # Removing a parameter takes every month of figures filed against it, which
     # silently changes past reports and exports. Say so before, not after.
-    warnings = [f"Figures filed for {months} month{'' if months == 1 else 's'} go with it — "
-                "past reports and exports will change."] if months else []
-    return _confirm_delete(request, param, reverse("project_edit", args=[param.project_id]),
-                           f"parameter “{param.name}”", warnings)
+    warnings = (
+        [
+            f"Figures filed for {months} month{'' if months == 1 else 's'} go with it — "
+            "past reports and exports will change."
+        ]
+        if months
+        else []
+    )
+    return _confirm_delete(
+        request,
+        param,
+        reverse("project_edit", args=[param.project_id]),
+        f"parameter “{param.name}”",
+        warnings,
+    )

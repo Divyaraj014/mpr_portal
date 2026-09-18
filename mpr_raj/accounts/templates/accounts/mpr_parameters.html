@@ -1,11 +1,11 @@
 {% extends "accounts/app.html" %}
 {% block title %}{{ project.name }}{% endblock %}
 {% block content %}
-<a href="{% url 'mpr_month' period.pk %}" class="btn-ghost btn-back">← Back to {{ period }}</a>
+<a href="{{ back }}" class="btn-ghost btn-back">Back to {{ back_label }}</a>
 <div class="page-head">
   <div>
     <h1 class="pg">{{ project.name }}</h1>
-    <div class="pg-sub">Monthly figures for {{ period }}. Previous month is carried forward; edit it if it changed.</div>
+    <div class="pg-sub">Monthly figures for {{ period }}. Previous month is carried forward; edit it if it changed. Since inception is worked out from last month's total — press Use this to accept it, or type the correct figure.</div>
   </div>
 </div>
 <form method="post">
@@ -23,7 +23,11 @@
       {# Column headers disappear on narrow screens, so each field carries its own label. #}
       <div><span class="fl">Previous month</span>{{ form.previous_month }}</div>
       <div><span class="fl">Reporting month</span>{{ form.reporting_month }}</div>
-      <div><span class="fl">Since inception</span>{{ form.cumulative }}</div>
+      <div><span class="fl">Since inception</span>{{ form.cumulative }}
+        {% if form.last_cumulative %}<div class="helptext">{{ prev }}: {{ form.last_cumulative }}</div>{% endif %}
+        {# Filled and shown by app.js once a numeric reporting figure is typed. #}
+        {% if editable and form.last_cumulative %}<div class="helptext calc" hidden aria-live="polite">Calculated: <span></span> <button type="button" class="btn-ghost">Use this</button></div>{% endif %}
+      </div>
     </div>
     {% empty %}
     <div class="trow empty">

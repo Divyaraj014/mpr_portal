@@ -20,12 +20,14 @@ wheels/
 # Django
 *.sqlite3
 media/
+staticfiles/
+logs/
 
 # ai-agent related
 .claude/
 mpr_raj/.claude/
 mpr_raj/.agents/
 .preview-tmp/
-design.md 
+design.md
 plan.md
 TECHNICAL_GUIDE.md

@@ -37,7 +37,9 @@ user owes only one report) and by the report page (when they owe both). Expects 
   {# Read-only sections that already have rows need no footer at all. #}
   {% if editable or not s.rows %}
   <div class="sec-foot">
-    {% if editable %}
+    {% if editable and s.rows and s.single %}
+      <span class="hint">One entry per month — use Edit to change it.</span>
+    {% elif editable %}
       <a class="btn-outline" href="{% url 'mpr_entry_add' period.pk s.kind %}?scope={{ g.scope }}{% if g.project %}&amp;project={{ g.project.pk }}{% endif %}">Add {% if s.rows %}another{% endif %}</a>
       {% if not s.rows %}<span class="hint">Nothing recorded for this month yet.</span>{% endif %}
     {% else %}
