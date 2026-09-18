@@ -233,6 +233,63 @@ curl -I http://192.168.1.42/
 Django's own log rotates into `mpr_raj/logs/mpr.log`; gunicorn's goes to the
 journal.
 
+### Running from a home directory
+
+If the project stays where you cloned it — say
+`/home/nic_kota/Development/projects/mpr_portal` — it works, but nginx needs
+three things it does not need under `/srv`.
+
+**1. Traverse permission on every directory in the path.** Fedora creates home
+directories as `700`, so nginx cannot walk into them:
+
+```bash
+chmod o+x /home/nic_kota \
+          /home/nic_kota/Development \
+          /home/nic_kota/Development/projects \
+          /home/nic_kota/Development/projects/mpr_portal \
+          /home/nic_kota/Development/projects/mpr_portal/mpr_raj
+```
+
+This lets any local account traverse *into* those directories — not list them,
+but reach a known path. On a single-admin server that is usually fine; on a
+shared machine, prefer a separate clone under `/srv`.
+
+**2. SELinux labels.** `/home` is `user_home_t`, which nginx will not serve:
+
+```bash
+sudo semanage fcontext -a -t httpd_sys_content_t \
+  "/home/nic_kota/Development/projects/mpr_portal/mpr_raj/(staticfiles|media)(/.*)?"
+sudo restorecon -Rv /home/nic_kota/Development/projects/mpr_portal/mpr_raj
+```
+
+**3. `ProtectHome=false` in the systemd unit.** It ships as `read-only`, which
+blocks writes to `media/` and `logs/`. The symptom is uploads failing and an
+empty log — it looks like an application bug, not a sandbox setting.
+
+The unit then reads:
+
+```ini
+User=nic_kota
+Group=nginx
+WorkingDirectory=/home/nic_kota/Development/projects/mpr_portal/mpr_raj
+ExecStart=/home/nic_kota/Development/projects/mpr_portal/.venv/bin/gunicorn \
+    --workers 3 --bind 127.0.0.1:8001 \
+    --access-logfile - --error-logfile - \
+    mpr_raj.wsgi:application
+ProtectHome=false
+ReadWritePaths=/home/nic_kota/Development/projects/mpr_portal/mpr_raj/media \
+               /home/nic_kota/Development/projects/mpr_portal/mpr_raj/logs
+```
+
+and the two `alias` paths in the nginx config point at the same place.
+
+**A note on running production from a working checkout.** A path under
+`Development/projects` is usually where you edit code. Serving from it means a
+`git pull` or a stray edit changes what users are running mid-request, and an
+uncommitted experiment becomes live behaviour. Once real MPRs are being filed
+here, a separate clone under `/srv` that only ever moves on a deliberate deploy
+is worth the ten minutes.
+
 ### Updating
 
 ```bash

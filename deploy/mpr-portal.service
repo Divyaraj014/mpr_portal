@@ -8,6 +8,10 @@
 # together if it lives somewhere else — a mismatch here fails with a bare 502
 # from nginx and nothing useful in its log; `journalctl -u mpr-portal` has the
 # real error.
+#
+# Running from a home directory instead? Three lines below need changing: User,
+# the two paths, and ProtectHome — which is read-only here and would block the
+# media/ and logs/ writes. See "Running from a home directory" in the README.
 
 [Unit]
 Description=MPR Portal (gunicorn)
@@ -46,6 +50,9 @@ StandardError=journal
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
+
+# Set ProtectHome=false if the project lives under /home — otherwise uploads and
+# the log file fail with a permission error that reads like an application bug.
 ProtectHome=read-only
 ReadWritePaths=/srv/mpr_portal/mpr_raj/media /srv/mpr_portal/mpr_raj/logs
 
