@@ -9,8 +9,11 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
-import environ
+import sys
+from datetime import timedelta
 from pathlib import Path
+
+import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -36,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'axes',
 ]
 
 MIDDLEWARE = [
@@ -47,6 +51,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'accounts.middleware.ForcePasswordChangeMiddleware',
+    'axes.middleware.AxesMiddleware',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
@@ -99,6 +104,27 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+
+# Lockout. Axes only enforces; accounts/security.py records what it does.
+# All three of INSTALLED_APPS, AUTHENTICATION_BACKENDS and the middleware are
+# required — miss one and enforcement silently does nothing.
+
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+# The nested list locks the PAIR. Username alone lets anyone lock out a known DIO
+# on purpose; IP alone means one typist locks out a whole NAT'd district office.
+AXES_LOCKOUT_PARAMETERS = [['username', 'ip_address']]
+AXES_FAILURE_LIMIT = env.int('AXES_FAILURE_LIMIT', default=5)
+AXES_COOLOFF_TIME = timedelta(minutes=env.int('AXES_COOLOFF_MINUTES', default=30))
+AXES_RESET_ON_SUCCESS = True
+
+# Tests drive the login view directly and would lock one another out. The lockout
+# tests re-enable this with @override_settings.
+AXES_ENABLED = 'test' not in sys.argv
 
 
 # Internationalization
