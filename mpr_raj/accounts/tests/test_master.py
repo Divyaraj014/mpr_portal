@@ -175,6 +175,14 @@ class MasterDataTests(TestCase):
         self.admin.save()
         self.client.force_login(self.admin)
 
+    def test_existing_filter_rows_still_render_selects(self):
+        # _filters.html grew a text-input branch for the security log; the master
+        # lists must be unaffected by it.
+        for url in ("user_list", "project_list"):
+            resp = self.client.get(reverse(url))
+            self.assertContains(resp, "<select")
+            self.assertNotContains(resp, 'type="search"')
+
     def test_non_staff_cannot_manage_master_data(self):
         self.client.logout()
         self.client.force_login(User.objects.create_user("pleb", password="x", must_change_password=False))

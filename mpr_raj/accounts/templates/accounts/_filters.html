@@ -3,19 +3,26 @@ The filter row above a master list. Plain GET, like the month picker on the repo
 screens — the choice lands in the URL, so a filtered list stays linkable and
 survives a refresh. app.js submits on change; the <noscript> button is the fallback.
 
-Context: `filters` (one dict per select: name, label, blank, options, selected),
+Context: `filters` (one dict per control: name, label, blank, options, selected,
+and optional type — "text" for a search box, anything else for a select),
 `filtered`, `showing`, `total`, `clear_url`.
 {% endcomment %}
 <form method="get" class="filters">
   {% for f in filters %}
   <div>
     <label for="f-{{ f.name }}">{{ f.label }}</label>
+    {% if f.type == "text" %}
+    {# No data-submit-on-change: that would fire a request per keystroke. Enter submits. #}
+    <input type="search" id="f-{{ f.name }}" name="{{ f.name }}"
+           value="{{ f.selected }}" placeholder="{{ f.blank }}">
+    {% else %}
     <select id="f-{{ f.name }}" name="{{ f.name }}" data-submit-on-change>
       <option value="">{{ f.blank }}</option>
       {% for value, label in f.options %}
       <option value="{{ value }}" {% if f.selected == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
     </select>
+    {% endif %}
   </div>
   {% endfor %}
   <noscript><button type="submit" class="btn-outline">Apply</button></noscript>
