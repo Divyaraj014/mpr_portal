@@ -39,3 +39,29 @@ class LockoutTests(TestCase):
             })
         self.attempt("Right@12345")
         self.assertIn("_auth_user_id", self.client.session)
+
+
+class SecurityEventModelTests(TestCase):
+    def test_labels_outlive_the_user_they_name(self):
+        from ..models import SecurityEvent
+
+        admin = User.objects.create_user("admin.one", password="x", is_staff=True)
+        victim = User.objects.create_user("dio.gone", password="x")
+        SecurityEvent.objects.create(
+            action=SecurityEvent.USER_DELETED,
+            actor=admin, actor_label=admin.username,
+            target=victim, target_label=victim.username,
+        )
+        victim.delete()
+
+        event = SecurityEvent.objects.get()
+        self.assertIsNone(event.target)                    # FK went null
+        self.assertEqual(event.target_label, "dio.gone")   # the record still reads
+
+    def test_a_failed_login_can_name_a_user_that_never_existed(self):
+        from ..models import SecurityEvent
+
+        SecurityEvent.objects.create(
+            action=SecurityEvent.LOGIN_FAIL, actor=None, actor_label="root",
+        )
+        self.assertEqual(SecurityEvent.objects.get().actor_label, "root")

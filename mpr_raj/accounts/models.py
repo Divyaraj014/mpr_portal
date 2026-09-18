@@ -442,3 +442,54 @@ class ParameterValue(models.Model):
 
     def __str__(self):
         return f"{self.parameter.name} @ {self.period}"
+
+
+class SecurityEvent(models.Model):
+    """
+    One security-relevant thing that happened: a sign-in, a failure, a lockout, a
+    role change. Written by accounts/security.py, never edited.
+
+    actor/target link while the user exists; the *_label fields are what the log
+    actually says. Two required cases break a bare FK — a deleted account leaves
+    the row pointing at NULL, and a failed login can name a user that never
+    existed, which is exactly what guessing looks like.
+    """
+
+    LOGIN_OK = "login_ok"
+    LOGIN_FAIL = "login_fail"
+    LOGOUT = "logout"
+    LOCKED_OUT = "locked_out"
+    LOCK_CLEARED = "lock_cleared"
+    PASSWORD_CHANGED = "password_changed"
+    ROLE_CHANGED = "role_changed"
+    USER_CREATED = "user_created"
+    USER_DISABLED = "user_disabled"
+    USER_ENABLED = "user_enabled"
+    USER_DELETED = "user_deleted"
+
+    ACTIONS = [
+        (LOGIN_OK, "Signed in"), (LOGIN_FAIL, "Sign-in failed"), (LOGOUT, "Signed out"),
+        (LOCKED_OUT, "Locked out"), (LOCK_CLEARED, "Lock cleared"),
+        (PASSWORD_CHANGED, "Password changed"), (ROLE_CHANGED, "Roles changed"),
+        (USER_CREATED, "User created"), (USER_DISABLED, "User disabled"),
+        (USER_ENABLED, "User re-enabled"), (USER_DELETED, "User deleted"),
+    ]
+
+    at = models.DateTimeField(auto_now_add=True)
+    action = models.CharField(max_length=20, choices=ACTIONS)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                              on_delete=models.SET_NULL, related_name="security_events")
+    actor_label = models.CharField(max_length=150)
+    target = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                               on_delete=models.SET_NULL, related_name="security_events_about")
+    target_label = models.CharField(max_length=150, blank=True)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=256, blank=True)
+    detail = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-at"]
+        indexes = [models.Index(fields=["-at"]), models.Index(fields=["actor_label"])]
+
+    def __str__(self):
+        return f"{self.actor_label} — {self.get_action_display()}"
