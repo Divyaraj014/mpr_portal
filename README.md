@@ -87,6 +87,62 @@ limit, then wrapped — which reads better for the long literal lists here (the 
 Rajasthan districts are 8 scannable lines, not 43). `ruff format` is Black-style
 and cannot produce that, so `ruff check` lints but nothing rewrites layout.
 
+## Running it on a LAN
+
+For letting colleagues reach the portal from other machines on the office
+network. This is the `runserver` path — fine for testing and demos, not for
+real use; see Deployment below for that.
+
+On the server, in `mpr_raj/.env`:
+
+```
+DEBUG=True
+HTTPS=False
+ALLOWED_HOSTS=localhost,127.0.0.1,<this machine's LAN IP>
+```
+
+`ip addr show | grep "inet "` gives you the address. Then:
+
+```bash
+cd mpr_raj
+uv run python manage.py runserver 0.0.0.0:8000
+```
+
+`0.0.0.0` is the part that matters — the default binds to localhost only, so
+the port is open but nothing outside the machine can reach it.
+
+Fedora blocks the port by default. To open it for this session:
+
+```bash
+sudo firewall-cmd --add-port=8000/tcp
+```
+
+Add `--permanent` and re-run `sudo firewall-cmd --reload` to keep it across
+reboots. Only do that on a network you trust — there is no TLS here, so
+passwords cross the LAN in clear text.
+
+Colleagues then use `http://<LAN IP>:8000/`.
+
+### Why DEBUG=True for this
+
+With `DEBUG=False`, `runserver` stops serving static files and every page
+arrives unstyled. `DEBUG=True` avoids that, at the cost of showing a full
+traceback — including settings — to anyone who triggers an error. That trade is
+fine on a trusted network for testing and wrong anywhere else.
+
+To run with `DEBUG=False` instead, set `HTTPS=False` as well (or Django
+redirects everything to a port nothing is serving), run `collectstatic`, and
+serve `staticfiles/` with a real web server rather than `runserver`.
+
+### If it still will not connect
+
+- `DisallowedHost` in the log — the address you typed is not in `ALLOWED_HOSTS`.
+- Connects from the server but not from other machines — firewall, or you left
+  off `0.0.0.0`.
+- Redirects to `https://` and fails — `DEBUG=False` with `HTTPS` unset.
+- Sign-in fails five times and then keeps failing — that is the lockout working.
+  It clears after 30 minutes, or an admin can clear it from the security log.
+
 ## Deployment
 
 Set `DEBUG=False`, a real `SECRET_KEY`, and a real `ALLOWED_HOSTS` /

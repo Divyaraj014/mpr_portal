@@ -161,10 +161,18 @@ MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 
-# Production hardening — everything `manage.py check --deploy` asks for. Off under
-# DEBUG so local HTTP development still works.
+# Production hardening — everything `manage.py check --deploy` asks for.
+#
+# Gated on HTTPS rather than on DEBUG, because "not DEBUG" and "reachable over
+# TLS" are different questions. A LAN box serving plain HTTP is neither: turning
+# SECURE_SSL_REDIRECT on there redirects every request to a port nothing is
+# listening on, and HSTS would pin that host to HTTPS in colleagues' browsers for
+# a year afterwards. Defaults to on whenever DEBUG is off, so a real deployment
+# still gets all of it without setting anything.
 
-if not DEBUG:
+HTTPS = env.bool('HTTPS', default=not DEBUG)
+
+if HTTPS:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
