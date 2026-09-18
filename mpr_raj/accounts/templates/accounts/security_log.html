@@ -1,8 +1,11 @@
 {% extends "accounts/app.html" %}
 {% block title %}Security log{% endblock %}
 {% block content %}
+{# qs carries a leading "&" for the pager links; strip it to start a query string. #}
 <div class="page-head">
   <div class="t">Security log</div>
+  <a href="{% url 'security_export' %}{% if qs %}?{{ qs|slice:'1:' }}{% endif %}"
+     class="btn-outline">Download .txt</a>
 </div>
 
 {% if locked %}

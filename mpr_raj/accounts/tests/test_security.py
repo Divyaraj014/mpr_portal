@@ -3,6 +3,7 @@ from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
 from ..captcha import SESSION_KEY
+from ..views.security import PER_PAGE
 
 User = get_user_model()
 
@@ -267,3 +268,44 @@ class UnlockTests(TestCase):
             "username": "dio.kota", "password": "Right@12345",
             "captcha": self.solve_captcha()})
         self.assertIn("_auth_user_id", self.client.session)
+
+
+class ExportTests(TestCase):
+    def setUp(self):
+        from ..models import SecurityEvent
+
+        self.admin = User.objects.create_user("admin.one", password="x", is_staff=True,
+                                              must_change_password=False)
+        for i in range(150):
+            SecurityEvent.objects.create(action=SecurityEvent.LOGIN_OK,
+                                         actor_label=f"dio.{i:03d}")
+        SecurityEvent.objects.create(action=SecurityEvent.LOGIN_FAIL, actor_label="root")
+
+    def body(self, **params):
+        self.client.force_login(self.admin)
+        return self.client.get(reverse("security_export"), params).content.decode()
+
+    def test_a_non_admin_cannot_download_it(self):
+        plain = User.objects.create_user("dio.kota", password="x", must_change_password=False)
+        self.client.force_login(plain)
+        resp = self.client.get(reverse("security_export"))
+        self.assertIn(reverse("login"), resp["Location"])
+
+    def test_it_ignores_pagination_and_returns_every_matching_row(self):
+        from ..models import SecurityEvent
+
+        # Well over 100 events, 100 per page on screen — a 100-row file is the trap.
+        text = self.body()
+        # Counted after the request: signing in to fetch it is itself an event.
+        total = SecurityEvent.objects.count()
+        self.assertGreater(total, PER_PAGE)
+        self.assertIn("dio.000", text)
+        self.assertIn("dio.149", text)
+        self.assertIn(f"1–{total} of {total}", text)
+
+    def test_it_respects_the_filter_and_says_so_in_the_header(self):
+        text = self.body(user="root")
+        self.assertIn("root", text)
+        self.assertNotIn("dio.000", text)
+        # An export that does not state what was excluded is misleading evidence.
+        self.assertIn('user contains "root"', text)
