@@ -43,6 +43,7 @@ urlpatterns = [
     path("mpr/<int:pk>/lock/", views.mpr_lock, name="mpr_lock"),
     path("mpr/<int:pk>/unlock-request/", views.mpr_unlock_request, name="mpr_unlock_request"),
     path("security/", views.security_log, name="security_log"),
+    path("security/unlock/", views.security_unlock, name="security_unlock"),
     path("reports/", views.reports, name="reports"),
     path("reports/status/", views.report_status, name="report_status"),
     path("reports/data/<str:key>/", views.report_table, name="report_table"),

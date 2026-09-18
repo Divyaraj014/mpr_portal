@@ -733,6 +733,15 @@ a.rowlink:focus-visible {
   grid-template-columns: 130px 130px 1fr 1fr 120px 1.6fr;
 }
 
+/* One locked-out pair and its Clear button. The panel only renders when
+   something is actually locked, so the common case stays quiet. */
+.lock-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
 /* Pager under a paginated table. The security log is the only list long enough
    to need one — the master lists deliberately show everything. */
 .pager {

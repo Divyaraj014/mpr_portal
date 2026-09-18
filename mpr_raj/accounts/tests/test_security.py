@@ -216,3 +216,54 @@ class SecurityScreenTests(TestCase):
         self.client.force_login(self.admin)
         resp = self.client.get(reverse("security_log"), {"action": SecurityEvent.LOGIN_FAIL})
         self.assertEqual(len(resp.context["events"]), 1)
+
+
+class UnlockTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user("admin.one", password="x", is_staff=True,
+                                              must_change_password=False)
+
+    def solve_captcha(self):
+        self.client.get(reverse("captcha_image"))
+        return self.client.session[SESSION_KEY][-1]
+
+    def test_a_non_admin_cannot_clear_a_lock(self):
+        from ..models import SecurityEvent
+
+        plain = User.objects.create_user("dio.kota", password="x", must_change_password=False)
+        self.client.force_login(plain)
+        resp = self.client.post(reverse("security_unlock"), {"username": "dio.kota"})
+
+        # admin_required bounces to the login page with a 302, and a successful
+        # clear also returns 302 — so assert the effect, not the status code.
+        self.assertIn(reverse("login"), resp["Location"])
+        self.assertFalse(
+            SecurityEvent.objects.filter(action=SecurityEvent.LOCK_CLEARED).exists())
+
+    def test_clearing_a_lock_is_itself_recorded(self):
+        from ..models import SecurityEvent
+
+        self.client.force_login(self.admin)
+        self.client.post(reverse("security_unlock"), {"username": "dio.kota"})
+        event = SecurityEvent.objects.get(action=SecurityEvent.LOCK_CLEARED)
+        self.assertEqual(event.actor, self.admin)
+        self.assertEqual(event.target_label, "dio.kota")
+
+    @override_settings(AXES_ENABLED=True, AXES_FAILURE_LIMIT=3)
+    def test_clearing_a_lock_actually_restores_access(self):
+        # Recording the clear is not the point — letting the person back in is.
+        User.objects.create_user("dio.kota", password="Right@12345",
+                                 must_change_password=False)
+        for _ in range(3):
+            self.client.post(reverse("login"), {
+                "username": "dio.kota", "password": "Wrong@12345",
+                "captcha": self.solve_captcha()})
+
+        self.client.force_login(self.admin)
+        self.client.post(reverse("security_unlock"), {"username": "dio.kota"})
+        self.client.logout()
+
+        self.client.post(reverse("login"), {
+            "username": "dio.kota", "password": "Right@12345",
+            "captcha": self.solve_captcha()})
+        self.assertIn("_auth_user_id", self.client.session)

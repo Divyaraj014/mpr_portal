@@ -2,9 +2,10 @@
 from urllib.parse import urlencode
 
 from django.core.paginator import Paginator
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 
 from ..models import SecurityEvent
+from ..security import record
 from .master import admin_required
 
 PER_PAGE = 100
@@ -32,6 +33,13 @@ def _filtered(request):
     return events, kept, filters
 
 
+def _locked_out():
+    """Currently locked username+IP pairs, newest first."""
+    from axes.models import AccessAttempt
+
+    return AccessAttempt.objects.order_by("-attempt_time")[:50]
+
+
 @admin_required
 def security_log(request):
     """
@@ -47,5 +55,23 @@ def security_log(request):
         "qs": ("&" + urlencode(kept)) if kept else "",
         "filters": filters, "filtered": bool(kept),
         "showing": page.paginator.count, "total": SecurityEvent.objects.count(),
-        "clear_url": "security_log",
+        "clear_url": "security_log", "locked": _locked_out(),
     })
+
+
+@admin_required
+def security_unlock(request):
+    """
+    Clear one lockout now. The cool-off would expire on its own, but a DIO locked
+    out at 9pm on the 5th cannot wait for it.
+    """
+    if request.method != "POST":
+        return redirect("security_log")
+    username = request.POST.get("username", "").strip()
+    if username:
+        from axes.utils import reset
+
+        reset(username=username)
+        record(SecurityEvent.LOCK_CLEARED, actor=request.user, target_label=username,
+               request=request)
+    return redirect("security_log")

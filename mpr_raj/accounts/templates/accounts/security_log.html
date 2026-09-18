@@ -5,6 +5,24 @@
   <div class="t">Security log</div>
 </div>
 
+{% if locked %}
+<div class="card">
+  <div class="c-head">Currently locked out</div>
+  {% for a in locked %}
+  <div class="lock-row">
+    <span class="t-id">{{ a.username }}</span>
+    <span class="t-val">{{ a.ip_address|default:"-" }}</span>
+    <span class="t-note">{{ a.attempt_time|date:"d-m-Y H:i" }}</span>
+    <form method="post" action="{% url 'security_unlock' %}">
+      {% csrf_token %}
+      <input type="hidden" name="username" value="{{ a.username }}">
+      <button type="submit" class="btn-outline">Clear</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 {% include "accounts/_filters.html" %}
 
 {# Column widths live in app.css, under .tbl-security. #}
