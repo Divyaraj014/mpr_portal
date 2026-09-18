@@ -17,3 +17,4 @@ from .monthly import (  # noqa: F401
 from .reporting import (  # noqa: F401
     monitor_required, report_export, report_status, report_table, report_unlock, reports,
 )
+from .security import security_log  # noqa: F401

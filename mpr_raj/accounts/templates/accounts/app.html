@@ -66,6 +66,10 @@ page renders into. Pages extend this and fill {% block content %}.
           <span class="material-symbols-outlined" aria-hidden="true">calendar_month</span>
           <span>Reporting months</span>
         </a>
+        <a href="{% url 'security_log' %}" title="Security log" {% if 'security' in n %}class="active" aria-current="page"{% endif %}>
+          <span class="material-symbols-outlined" aria-hidden="true">shield</span>
+          <span>Security log</span>
+        </a>
       </div>
       {% endif %}
     </nav>

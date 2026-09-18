@@ -181,3 +181,38 @@ class ViewCaptureTests(TestCase):
         })
         self.assertTrue(
             SecurityEvent.objects.filter(action=SecurityEvent.PASSWORD_CHANGED).exists())
+
+
+class SecurityScreenTests(TestCase):
+    def setUp(self):
+        from ..models import SecurityEvent
+
+        self.admin = User.objects.create_user("admin.one", password="x", is_staff=True,
+                                              must_change_password=False)
+        SecurityEvent.objects.create(action=SecurityEvent.LOGIN_OK, actor_label="dio.kota")
+        SecurityEvent.objects.create(action=SecurityEvent.LOGIN_FAIL, actor_label="root")
+
+    def test_a_non_admin_cannot_reach_it(self):
+        plain = User.objects.create_user("dio.kota", password="x", must_change_password=False)
+        self.client.force_login(plain)
+        self.assertNotEqual(self.client.get(reverse("security_log")).status_code, 200)
+
+    def test_an_admin_sees_every_event(self):
+        self.client.force_login(self.admin)
+        resp = self.client.get(reverse("security_log"))
+        self.assertContains(resp, "dio.kota")
+        self.assertContains(resp, "root")
+
+    def test_the_user_filter_matches_a_name_with_no_account(self):
+        # The whole reason this filter is a text box and not a dropdown.
+        self.client.force_login(self.admin)
+        resp = self.client.get(reverse("security_log"), {"user": "root"})
+        self.assertContains(resp, "root")
+        self.assertNotContains(resp, "dio.kota")
+
+    def test_the_action_filter_narrows_by_kind(self):
+        from ..models import SecurityEvent
+
+        self.client.force_login(self.admin)
+        resp = self.client.get(reverse("security_log"), {"action": SecurityEvent.LOGIN_FAIL})
+        self.assertEqual(len(resp.context["events"]), 1)

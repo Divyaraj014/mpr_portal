@@ -728,6 +728,21 @@ a.rowlink:focus-visible {
 .tbl-projects :is(.thead, .trow) {
   grid-template-columns: 80px 1.8fr 1.1fr 0.9fr 1.6fr 60px;
 }
+/* Detail takes the slack: it holds sentences, the rest hold labels. */
+.tbl-security :is(.thead, .trow) {
+  grid-template-columns: 130px 130px 1fr 1fr 120px 1.6fr;
+}
+
+/* Pager under a paginated table. The security log is the only list long enough
+   to need one — the master lists deliberately show everything. */
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  font: 500 13px var(--font);
+  color: var(--muted);
+}
 /* The two long lists hold real names — "Regional Application Security and Audit
    Division,Jaipur", "Digital India Land Records Modernization Programme" — which
    is exactly what an ellipsis eats. Wrap instead: a taller row beats an

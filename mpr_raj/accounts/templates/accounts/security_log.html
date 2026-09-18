@@ -1,0 +1,48 @@
+{% extends "accounts/app.html" %}
+{% block title %}Security log{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="t">Security log</div>
+</div>
+
+{% include "accounts/_filters.html" %}
+
+{# Column widths live in app.css, under .tbl-security. #}
+<div class="table tbl-security">
+  <div class="thead">
+    <div>When</div><div>Event</div><div>User</div>
+    <div>Target</div><div>IP</div><div>Detail</div>
+  </div>
+  {% for e in events %}
+  <div class="trow">
+    <div class="t-val">{{ e.at|date:"d-m-Y H:i" }}</div>
+    <div class="t-key">{{ e.get_action_display }}</div>
+    <div class="t-id">{{ e.actor_label|default:"-" }}</div>
+    <div class="t-id">{{ e.target_label|default:"-" }}</div>
+    <div class="t-val">{{ e.ip|default:"-" }}</div>
+    <div class="t-note">{{ e.detail|default:"-" }}</div>
+  </div>
+  {% empty %}
+  <div class="trow empty">
+    {% if filtered %}
+    <div class="t-block">No events match these filters</div>
+    <div class="t-note"><a href="{% url 'security_log' %}">Clear the filters</a> to see all {{ total }}.</div>
+    {% else %}
+    <div class="t-block">No events recorded yet</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+{% if page.has_other_pages %}
+<div class="pager">
+  {% if page.has_previous %}
+  <a class="btn-outline" href="?page={{ page.previous_page_number }}{{ qs }}">Previous</a>
+  {% endif %}
+  <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}
+  <a class="btn-outline" href="?page={{ page.next_page_number }}{{ qs }}">Next</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}
