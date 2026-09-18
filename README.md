@@ -103,3 +103,21 @@ Serve `staticfiles/` and `media/` from nginx — and make sure nginx never
 executes anything out of `media/`, since award photos are user uploads. Logs
 rotate into `mpr_raj/logs/mpr.log`. TLS terminates at the proxy, which must set
 `X-Forwarded-Proto`.
+
+### Client addresses in the security log
+
+Out of the box the security log records `REMOTE_ADDR`. A client cannot forge
+that, but behind a proxy it is the *proxy's* address, so every row reads the
+same and the IP column is worthless.
+
+To record real client addresses, both of these must be true:
+
+1. nginx **overwrites** the header rather than appending to whatever the client
+   sent — `proxy_set_header X-Forwarded-For $remote_addr;`
+2. `AXES_IPWARE_PROXY_COUNT` in `.env` is set to the number of proxies actually
+   in front of Django (`1` for a single nginx).
+
+Do one without the other and the logged IP becomes forgeable: a client can send
+its own `X-Forwarded-For` and choose what the security log says about it. An
+address you cannot trust is worse than none, because it is evidence people
+believe. Leave the count at `0` until the nginx side is confirmed.

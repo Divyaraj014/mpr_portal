@@ -122,6 +122,15 @@ AXES_FAILURE_LIMIT = env.int('AXES_FAILURE_LIMIT', default=5)
 AXES_COOLOFF_TIME = timedelta(minutes=env.int('AXES_COOLOFF_MINUTES', default=30))
 AXES_RESET_ON_SUCCESS = True
 
+# Whose address ends up in the security log. Left at 0, axes uses REMOTE_ADDR —
+# unforgeable, but behind a proxy that is the proxy, not the user. Set it to the
+# real number of proxies in front of Django AND make nginx overwrite
+# X-Forwarded-For rather than append (see the README). Guessing this number high
+# lets a client forge its own address into the log.
+_proxy_count = env.int('AXES_IPWARE_PROXY_COUNT', default=0)
+if _proxy_count:
+    AXES_IPWARE_PROXY_COUNT = _proxy_count
+
 # Tests drive the login view directly and would lock one another out. The lockout
 # tests re-enable this with @override_settings.
 AXES_ENABLED = 'test' not in sys.argv

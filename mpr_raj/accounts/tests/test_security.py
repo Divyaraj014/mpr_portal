@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.test import TestCase, override_settings
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
 from ..captcha import SESSION_KEY
@@ -65,3 +65,38 @@ class SecurityEventModelTests(TestCase):
             action=SecurityEvent.LOGIN_FAIL, actor=None, actor_label="root",
         )
         self.assertEqual(SecurityEvent.objects.get().actor_label, "root")
+
+
+class RecordTests(TestCase):
+    def request(self, **meta):
+        request = RequestFactory().get("/")
+        request.META.update(meta)
+        return request
+
+    def test_a_spoofed_forwarded_header_does_not_change_the_logged_ip(self):
+        from ..models import SecurityEvent
+        from ..security import record
+
+        request = self.request(REMOTE_ADDR="10.0.0.5", HTTP_X_FORWARDED_FOR="1.2.3.4")
+        record(SecurityEvent.LOGIN_OK, actor_label="dio.kota", request=request)
+
+        # No trusted-proxy count is configured by default, so the client-supplied
+        # header must not win. A forgeable IP is worse than no IP at all.
+        self.assertEqual(SecurityEvent.objects.get().ip, "10.0.0.5")
+
+    def test_over_long_labels_are_truncated_not_rejected(self):
+        from ..models import SecurityEvent
+        from ..security import record
+
+        record(SecurityEvent.LOGIN_FAIL, actor_label="z" * 400)
+        self.assertEqual(len(SecurityEvent.objects.get().actor_label), 150)
+
+    def test_a_write_failure_does_not_propagate(self):
+        from unittest.mock import patch
+
+        from ..models import SecurityEvent
+        from ..security import record
+
+        with patch.object(SecurityEvent.objects, "create", side_effect=RuntimeError("db down")):
+            record(SecurityEvent.LOGIN_OK, actor_label="dio.kota")   # must not raise
+        self.assertEqual(SecurityEvent.objects.count(), 0)
